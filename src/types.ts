@@ -94,12 +94,9 @@ export interface PiSystemTelemetry {
   ramTotalMb: number;
   diskUsedGb: number;
   diskTotalGb: number;
-  ftpServerOnline: boolean;
-  ftpPort: number;
-  ftpStoragePath: string;
-  allowAnonymous: boolean;
-  securityMode: 'plain' | 'ftps_explicit';
-  requireCertificate: boolean;
+  activeDriveName: string;
+  activeDrivePath: string;
+  driveStatus: 'connected' | 'syncing' | 'idle' | 'warning';
   cameraConnected: boolean;
   cameraName: string;
   cameraBattery: number;
@@ -108,29 +105,35 @@ export interface PiSystemTelemetry {
   lastPhotoReceivedTime: string;
 }
 
-export interface FtpLogEntry {
-  id: string;
-  timestamp: string;
-  clientIp: string;
-  clientName: string;
-  action: 'CONNECT' | 'LOGIN_ANON' | 'LOGIN_USER' | 'STOR_START' | 'STOR_COMPLETE' | 'DISCONNECT' | 'ERROR';
-  fileName?: string;
-  fileSize?: string;
-  details: string;
-  isSuccess: boolean;
+export interface DriveStorageConfig {
+  activeStoragePath: string;
+  driveLabel: string;
+  autoScanIntervalSeconds: number;
+  autoOrganizeByDate: boolean;
+  autoIndexPatients: boolean;
+  diskSpaceAlertThresholdGb: number;
 }
 
-export interface FtpConnectionTestResult {
+export type LogLevel = 'INFO' | 'SUCCESS' | 'WARN' | 'ERROR' | 'DRIVE';
+
+export interface SystemLogEntry {
+  id: string;
+  timestamp: string;
+  level: LogLevel;
+  source: string;
+  message: string;
+  details?: string;
+  fileName?: string;
+  fileSize?: string;
+}
+
+export interface DriveScanResult {
   isSuccess: boolean;
-  checkedAt: string;
-  host: string;
-  port: number;
-  authMode: 'anonymous' | 'authenticated';
-  security: 'plain' | 'ftps';
-  certificateRequired: boolean;
-  storagePathWritable: boolean;
-  storagePathResolved: string;
-  freeDiskSpaceGb: number;
+  scannedAt: string;
+  drivePath: string;
+  totalPhotosFound: number;
+  newPhotosIndexed: number;
+  freeSpaceGb: number;
   logs: string[];
 }
 

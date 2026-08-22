@@ -10,65 +10,75 @@ import { InboxView } from './components/InboxView';
 import { PatientGalleryView } from './components/PatientGalleryView';
 import { BeforeAfterView } from './components/BeforeAfterView';
 import { FileManagerView } from './components/FileManagerView';
+import { SystemLogsView } from './components/SystemLogsView';
 import { TagPhotoModal } from './components/TagPhotoModal';
 import { PhotoLightboxModal } from './components/PhotoLightboxModal';
-import { FtpSettingsModal, FtpConfigData } from './components/FtpSettingsModal';
-import { Patient, MedicalPhoto, PhotoAngle, SurgeryStage, ClinicalNotes } from './types';
-import { INITIAL_PATIENTS, INITIAL_PHOTOS } from './data/seedData';
+import { DriveSettingsModal } from './components/DriveSettingsModal';
+import {
+  Patient,
+  MedicalPhoto,
+  PhotoAngle,
+  SurgeryStage,
+  ClinicalNotes,
+  DriveStorageConfig,
+  PiSystemTelemetry
+} from './types';
+import { INITIAL_PATIENTS, INITIAL_PHOTOS, INITIAL_PI_TELEMETRY } from './data/seedData';
 import { medicalAudio } from './utils/audioAlert';
 
-const DEFAULT_FTP_CONFIG: FtpConfigData = {
-  ipAddress: '192.168.1.150',
-  port: 2121,
-  username: 'anonymous',
-  password: '',
-  allowAnonymous: true,
-  securityMode: 'plain',
-  requireCertificate: false,
-  storagePath: '/home/pi/medical_storage/raw_uploads',
+const DEFAULT_DRIVE_CONFIG: DriveStorageConfig = {
+  activeStoragePath: '/media/pi/hdd_medical',
+  driveLabel: 'هارد اکسترنال کلینیک (2TB)',
   autoOrganizeByDate: true,
-  passiveMode: true,
-  passivePortRange: '50000-50100',
-  maxFileSizeMb: 100
+  autoIndexPatients: true,
+  autoScanIntervalSeconds: 5,
+  diskSpaceAlertThresholdGb: 10,
 };
 
 export default function App() {
-  // Navigation: 4 Views
-  const [activeTab, setActiveTab] = useState<'inbox' | 'patients' | 'compare' | 'explorer'>('inbox');
+  // Navigation: 5 Views
+  const [activeTab, setActiveTab] = useState<'inbox' | 'patients' | 'compare' | 'explorer' | 'logs'>('inbox');
   
   // Data States
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
   const [photos, setPhotos] = useState<MedicalPhoto[]>(INITIAL_PHOTOS);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(INITIAL_PATIENTS[0] || null);
 
+  // Drive Config & Raspberry Pi Hardware Telemetry
+  const [driveConfig, setDriveConfig] = useState<DriveStorageConfig>(() => {
+    const saved = localStorage.getItem('drive_config');
+    return saved ? JSON.parse(saved) : DEFAULT_DRIVE_CONFIG;
+  });
+  const [telemetry, setTelemetry] = useState<PiSystemTelemetry | null>(INITIAL_PI_TELEMETRY);
+
   // Active Modals & Settings
   const [liveAlertPhoto, setLiveAlertPhoto] = useState<MedicalPhoto | null>(null);
   const [taggingPhoto, setTaggingPhoto] = useState<MedicalPhoto | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<MedicalPhoto | null>(null);
-  const [isFtpSettingsOpen, setIsFtpSettingsOpen] = useState<boolean>(false);
-  const [ftpConfig, setFtpConfig] = useState<FtpConfigData>(() => {
-    const saved = localStorage.getItem('ftp_config');
-    return saved ? JSON.parse(saved) : DEFAULT_FTP_CONFIG;
-  });
+  const [isDriveSettingsOpen, setIsDriveSettingsOpen] = useState<boolean>(false);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   // Before & After Comparison Selection
   const [comparePrePhotoId, setComparePrePhotoId] = useState<string | undefined>(undefined);
   const [comparePostPhotoId, setComparePostPhotoId] = useState<string | undefined>(undefined);
 
-  // Fetch initial data & FTP config from local server
+  // Fetch initial data, telemetry & drive config from local server
   const loadServerData = useCallback(async () => {
     try {
-      const [ptsRes, ptsPhotos, cfgRes] = await Promise.all([
-        fetch('/api/ftp/patients').then((r) => r.ok ? r.json() : INITIAL_PATIENTS),
-        fetch('/api/ftp/photos').then((r) => r.ok ? r.json() : INITIAL_PHOTOS),
-        fetch('/api/ftp/config').then((r) => r.ok ? r.json() : null).catch(() => null),
+      const [ptsRes, ptsPhotos, cfgRes, telemRes] = await Promise.all([
+        fetch('/api/patients').then((r) => (r.ok ? r.json() : INITIAL_PATIENTS)),
+        fetch('/api/photos').then((r) => (r.ok ? r.json() : INITIAL_PHOTOS)),
+        fetch('/api/drive/config').then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch('/api/drive/telemetry').then((r) => (r.ok ? r.json() : null)).catch(() => null),
       ]);
 
       if (Array.isArray(ptsRes)) setPatients(ptsRes);
       if (Array.isArray(ptsPhotos)) setPhotos(ptsPhotos);
       if (cfgRes && typeof cfgRes === 'object') {
-        setFtpConfig(prev => ({ ...prev, ...cfgRes }));
+        setDriveConfig((prev) => ({ ...prev, ...cfgRes }));
+      }
+      if (telemRes && typeof telemRes === 'object') {
+        setTelemetry(telemRes);
       }
     } catch (e) {
       console.warn('Using local fallback state:', e);
@@ -78,6 +88,19 @@ export default function App() {
   useEffect(() => {
     loadServerData();
   }, [loadServerData]);
+
+  // Periodic telemetry refresh every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch('/api/drive/telemetry')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data) setTelemetry(data);
+        })
+        .catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Toggle Sound
   const handleToggleSound = () => {
@@ -107,7 +130,7 @@ export default function App() {
     };
 
     try {
-      const res = await fetch('/api/ftp/tag-photo', {
+      const res = await fetch('/api/photos/tag', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,7 +174,7 @@ export default function App() {
   // Toggle flag for comparison
   const handleToggleCompareFlag = async (photoId: string) => {
     try {
-      await fetch(`/api/ftp/toggle-compare/${photoId}`, { method: 'POST' });
+      await fetch(`/api/photos/toggle-compare/${photoId}`, { method: 'POST' });
     } catch (e) {}
     setPhotos((prev) =>
       prev.map((p) =>
@@ -163,7 +186,7 @@ export default function App() {
   // Delete raw photo
   const handleDeletePhoto = async (photoId: string) => {
     try {
-      await fetch(`/api/ftp/photos/${photoId}`, { method: 'DELETE' });
+      await fetch(`/api/photos/${photoId}`, { method: 'DELETE' });
     } catch (e) {}
     setPhotos((prev) => prev.filter((p) => p.id !== photoId));
   };
@@ -171,7 +194,7 @@ export default function App() {
   // Update photo angle
   const handleUpdateAngle = async (photoId: string, angle: PhotoAngle) => {
     try {
-      await fetch(`/api/ftp/photos/${photoId}`, {
+      await fetch(`/api/photos/${photoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ angle }),
@@ -188,7 +211,7 @@ export default function App() {
   // Update notes
   const handleUpdateNotes = async (photoId: string, notes: string) => {
     try {
-      await fetch(`/api/ftp/photos/${photoId}`, {
+      await fetch(`/api/photos/${photoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -212,27 +235,46 @@ export default function App() {
     );
   };
 
-  // Save FTP config to server & local storage
-  const handleSaveFtpConfig = async (newConfig: FtpConfigData) => {
-    setFtpConfig(newConfig);
-    localStorage.setItem('ftp_config', JSON.stringify(newConfig));
+  // Save Drive Config to server & local storage
+  const handleSaveDriveConfig = async (newConfig: DriveStorageConfig) => {
+    setDriveConfig(newConfig);
+    localStorage.setItem('drive_config', JSON.stringify(newConfig));
     try {
-      await fetch('/api/ftp/config', {
+      await fetch('/api/drive/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newConfig)
       });
     } catch (e) {
-      console.warn('Could not save FTP config to server:', e);
+      console.warn('Could not save drive config to server:', e);
     }
   };
 
-  // When real photos are uploaded via drag & drop or file picker
+  // Trigger HDD Rescan
+  const handleTriggerRescan = async () => {
+    try {
+      const res = await fetch('/api/drive/rescan', { method: 'POST' });
+      if (res.ok) {
+        const freshPhotos = await fetch('/api/photos').then((r) => r.json());
+        if (Array.isArray(freshPhotos)) setPhotos(freshPhotos);
+      }
+    } catch (e) {
+      console.error('Trigger rescan error:', e);
+    }
+  };
+
+  // When real photos are imported or uploaded
   const handlePhotosUploaded = (newPhotos: MedicalPhoto[]) => {
     setPhotos((prev) => [...newPhotos, ...prev]);
     if (soundEnabled && newPhotos.length > 0) {
       medicalAudio.playNewPhotoChime();
     }
+  };
+
+  // Handle adding new patient
+  const handleAddPatient = (newPatient: Patient) => {
+    setPatients((prev) => [newPatient, ...prev]);
+    setSelectedPatient(newPatient);
   };
 
   // Navigate to compare view with specific pair
@@ -245,18 +287,17 @@ export default function App() {
   const inboxPhotos = photos.filter((p) => !p.patientId || p.patientId === 'unassigned');
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col selection:bg-emerald-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
       
-      {/* Clean Clinical Header with Navigation & FTP Settings */}
+      {/* Clean Clinical Header with Navigation & Hard Drive Status */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         inboxCount={inboxPhotos.length}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
-        onOpenFtpSettings={() => setIsFtpSettingsOpen(true)}
-        serverIp={ftpConfig.ipAddress}
-        serverPort={ftpConfig.port}
+        onOpenDriveSettings={() => setIsDriveSettingsOpen(true)}
+        telemetry={telemetry}
       />
 
       {/* Live Toast Notification on New Photo */}
@@ -275,9 +316,7 @@ export default function App() {
             onDeletePhoto={handleDeletePhoto}
             onSelectPhotoLightbox={(photo) => setLightboxPhoto(photo)}
             onPhotosUploaded={handlePhotosUploaded}
-            ftpStoragePath={ftpConfig.storagePath}
-            ftpPort={ftpConfig.port}
-            allowAnonymous={ftpConfig.allowAnonymous}
+            activeStoragePath={driveConfig.activeStoragePath}
           />
         )}
 
@@ -291,6 +330,7 @@ export default function App() {
             onSelectPhotoLightbox={(photo) => setLightboxPhoto(photo)}
             onNavigateToCompare={handleNavigateToCompare}
             onUpdateNotes={handleUpdateNotes}
+            onAddPatient={handleAddPatient}
           />
         )}
 
@@ -306,18 +346,23 @@ export default function App() {
 
         {activeTab === 'explorer' && (
           <FileManagerView
-            currentActiveStoragePath={ftpConfig.storagePath}
+            currentActiveStoragePath={driveConfig.activeStoragePath}
             onSetActiveStoragePath={(newPath) => {
-              const updated = { ...ftpConfig, storagePath: newPath };
-              handleSaveFtpConfig(updated);
+              const updated = { ...driveConfig, activeStoragePath: newPath };
+              handleSaveDriveConfig(updated);
             }}
             onOpenTagModal={(photo) => setTaggingPhoto(photo)}
             onSelectPhotoLightbox={(photo) => setLightboxPhoto(photo)}
             allPhotos={photos}
             patients={patients}
             onPhotosUploaded={handlePhotosUploaded}
-            serverIp={ftpConfig.ipAddress}
-            serverPort={ftpConfig.port}
+          />
+        )}
+
+        {activeTab === 'logs' && (
+          <SystemLogsView
+            telemetry={telemetry}
+            onTriggerRescan={handleTriggerRescan}
           />
         )}
       </main>
@@ -342,20 +387,22 @@ export default function App() {
         onUpdateAngle={handleUpdateAngle}
       />
 
-      {/* Modal: FTP Server & Wi-Fi Camera Setup */}
-      <FtpSettingsModal
-        isOpen={isFtpSettingsOpen}
-        onClose={() => setIsFtpSettingsOpen(false)}
-        config={ftpConfig}
-        onSaveConfig={handleSaveFtpConfig}
+      {/* Modal: Raspberry Pi Hard Drive Settings & Telemetry */}
+      <DriveSettingsModal
+        isOpen={isDriveSettingsOpen}
+        onClose={() => setIsDriveSettingsOpen(false)}
+        telemetry={telemetry}
+        currentConfig={driveConfig}
+        onSaveConfig={handleSaveDriveConfig}
+        onTriggerRescan={handleTriggerRescan}
       />
 
       {/* Clean Footer */}
-      <footer className="py-4 px-6 border-t border-slate-200 bg-white text-xs text-slate-500 text-center">
+      <footer className="py-4 px-6 border-t border-slate-200 bg-white text-xs text-slate-500 text-center shadow-2xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>سامانه دریافت خودکار و آرشیو تصاویر جراحی رینوپلاستی کلینیک</span>
-          <span className="font-mono-numbers text-slate-600">
-            سرور FTP: فعال روی پورت {ftpConfig.port} ({ftpConfig.ipAddress}) • {ftpConfig.allowAnonymous ? 'Anonymous' : 'User Auth'} • {ftpConfig.securityMode === 'plain' ? 'Plain FTP (بدون نیاز به گواهی)' : 'FTPS'}
+          <span>سامانه آرشیو و پایش مستقیم هارد دیسک عکس‌های پزشکی رزبری‌پای</span>
+          <span className="font-mono text-slate-600 font-semibold">
+            مسیر فعال: {driveConfig.activeStoragePath} • آی‌پی: {telemetry?.localIp || '192.168.1.150'} • دمای پردازنده: {telemetry?.cpuTemperatureC || 48.5}°C
           </span>
         </div>
       </footer>

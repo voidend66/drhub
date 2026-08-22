@@ -20,9 +20,7 @@ interface InboxViewProps {
   onDeletePhoto: (photoId: string) => void;
   onSelectPhotoLightbox: (photo: MedicalPhoto) => void;
   onPhotosUploaded?: (newPhotos: MedicalPhoto[]) => void;
-  ftpStoragePath?: string;
-  ftpPort?: number;
-  allowAnonymous?: boolean;
+  activeStoragePath?: string;
 }
 
 export const InboxView: React.FC<InboxViewProps> = ({
@@ -31,9 +29,7 @@ export const InboxView: React.FC<InboxViewProps> = ({
   onDeletePhoto,
   onSelectPhotoLightbox,
   onPhotosUploaded,
-  ftpStoragePath = '/home/pi/medical_storage/raw_uploads',
-  ftpPort = 2121,
-  allowAnonymous = true,
+  activeStoragePath = '/media/pi/hdd_medical',
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -54,14 +50,14 @@ export const InboxView: React.FC<InboxViewProps> = ({
         reader.onload = async (event) => {
           if (event.target?.result) {
             try {
-              const res = await fetch('/api/ftp/upload-raw', {
+              const res = await fetch('/api/photos/upload-raw', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   imageUrl: event.target.result,
                   fileName: file.name,
                   fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-                  source: 'Direct File Upload / SD Card Reader'
+                  source: 'Raspberry Pi Connected HDD Import'
                 })
               });
               if (res.ok) {
@@ -138,12 +134,10 @@ export const InboxView: React.FC<InboxViewProps> = ({
                 {inboxPhotos.length} شات جدید
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-mono-numbers mt-0.5 flex items-center gap-2">
-              <span>Port: {ftpPort}</span>
+            <p className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-2">
+              <span className="text-emerald-700 font-bold">هارد اکسترنال رزبری‌پای</span>
               <span>•</span>
-              <span>{allowAnonymous ? 'ورود ناشناس فعال (Anonymous)' : 'احراز هویت رمزدار'}</span>
-              <span>•</span>
-              <span className="truncate max-w-[220px]" title={ftpStoragePath}>مسیر: {ftpStoragePath}</span>
+              <span className="truncate max-w-[280px]" title={activeStoragePath}>مسیر: {activeStoragePath}</span>
             </p>
           </div>
         </div>
@@ -204,8 +198,8 @@ export const InboxView: React.FC<InboxViewProps> = ({
             </button>
           </div>
 
-          <span className="text-[11px] text-slate-400 font-mono-numbers">
-            سرور FTP روی پورت {ftpPort} (بدون نیاز به گواهی SSL) آماده پذیرش اتصال دوربین است.
+          <span className="text-[11px] text-slate-400 font-mono">
+            سیستم پایش زنده هارد درایو رزبری‌پای آماده دریافت و ساخت پوشه‌های خودکار است.
           </span>
         </div>
       ) : (

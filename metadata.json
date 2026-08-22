@@ -1,6 +1,6 @@
 {
   "name": "Remix Raspberry Pi 4 Doctor Clinical Dashboard",
-  "description": "داشبورد کلینیکال و شیک تصاویر پزشکی دکتر اکبر شهیدی پیام، دریافت خودکار تصاویر از طریق FTP دوربین‌ها، پرونده تصویری بیماران و ابزار مقایسه قبل و بعد جراحی",
+  "description": "داشبورد کلینیکال و شیک تصاویر پزشکی دکتر اکبر شهیدی پیام، اتصال مستقیم به هارد دیسک اکسترنال رزبری‌پای، مدیریت کامل فایل‌ها و پوشه‌ها، و سیستم لاگ‌گیری زنده و قوی",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

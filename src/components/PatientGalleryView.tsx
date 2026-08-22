@@ -9,7 +9,9 @@ import {
   Check, 
   Columns, 
   Maximize2,
-  Edit3
+  Edit3,
+  UserPlus,
+  X
 } from 'lucide-react';
 import { Patient, MedicalPhoto, SurgeryStage, PhotoAngle } from '../types';
 import { CLINICAL_ANGLES, SURGERY_STAGES } from '../data/clinicalDefinitions';
@@ -23,6 +25,7 @@ interface PatientGalleryViewProps {
   onSelectPhotoLightbox: (photo: MedicalPhoto) => void;
   onNavigateToCompare: (prePhotoId?: string, postPhotoId?: string) => void;
   onUpdateNotes: (photoId: string, notes: string) => void;
+  onAddPatient?: (newPatient: Patient) => void;
 }
 
 export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
@@ -34,12 +37,22 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
   onSelectPhotoLightbox,
   onNavigateToCompare,
   onUpdateNotes,
+  onAddPatient,
 }) => {
   const [patientSearch, setPatientSearch] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [angleFilter, setAngleFilter] = useState<string>('all');
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState<string>('');
+
+  // New Patient Form Modal state
+  const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
+  const [newFullName, setNewFullName] = useState('');
+  const [newFileNumber, setNewFileNumber] = useState('');
+  const [newNationalId, setNewNationalId] = useState('');
+  const [newAge, setNewAge] = useState<number>(28);
+  const [newSurgeryType, setNewSurgeryType] = useState('رینوپلاستی اولیه');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter patients list
   const filteredPatients = patients.filter(
@@ -82,6 +95,41 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
     );
   };
 
+  const handleCreatePatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFullName.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: newFullName,
+          fileNumber: newFileNumber,
+          nationalId: newNationalId,
+          age: newAge,
+          surgeryType: newSurgeryType,
+          surgeryDate: new Date().toLocaleDateString('fa-IR'),
+          surgeonName: 'دکتر اکبر شهیدی پیام',
+        }),
+      });
+
+      if (res.ok) {
+        const created = await res.json();
+        if (onAddPatient) onAddPatient(created);
+        setIsNewPatientModalOpen(false);
+        setNewFullName('');
+        setNewFileNumber('');
+        setNewNationalId('');
+      }
+    } catch (e) {
+      console.error('Create patient error:', e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div id="patient-gallery-container" className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       
@@ -93,9 +141,14 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
               <Users className="w-4 h-4 text-emerald-600" />
               <span>پرونده بیماران</span>
             </h3>
-            <span className="text-xs font-mono-numbers text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">
-              {patients.length} پرونده
-            </span>
+            
+            <button
+              onClick={() => setIsNewPatientModalOpen(true)}
+              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs transition"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>ثبت بیمار جدید</span>
+            </button>
           </div>
 
           {/* Search Box */}
@@ -112,40 +165,50 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
 
           {/* Patient Cards List */}
           <div className="space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto pr-0.5">
-            {filteredPatients.map((patient) => {
-              const isSelected = selectedPatient?.id === patient.id;
-              const photoCount = photos.filter((p) => p.patientId === patient.id).length;
-
-              return (
-                <div
-                  key={patient.id}
-                  onClick={() => onSelectPatient(patient)}
-                  className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all touch-active ${
-                    isSelected
-                      ? 'bg-emerald-50/70 border-emerald-400 shadow-xs'
-                      : 'bg-white border-slate-200 hover:bg-slate-50'
-                  }`}
+            {filteredPatients.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 space-y-3">
+                <Users className="w-10 h-10 mx-auto text-slate-300" />
+                <p className="text-xs font-medium text-slate-600">هیچ پرونده بیماری ثبت نشده است.</p>
+                <button
+                  onClick={() => setIsNewPatientModalOpen(true)}
+                  className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-emerald-700 transition"
                 >
-                  <img
-                    src={patient.avatarUrl}
-                    alt={patient.fullName}
-                    className="w-11 h-11 rounded-xl object-cover border border-slate-200 flex-shrink-0"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-xs text-slate-800 truncate">{patient.fullName}</h4>
-                      <span className="text-[10px] font-mono-numbers px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600 font-semibold">
-                        {photoCount} عکس
-                      </span>
+                  ثبت اولین بیمار
+                </button>
+              </div>
+            ) : (
+              filteredPatients.map((patient) => {
+                const isSelected = selectedPatient?.id === patient.id;
+                const photoCount = photos.filter((p) => p.patientId === patient.id).length;
+
+                return (
+                  <div
+                    key={patient.id}
+                    onClick={() => onSelectPatient(patient)}
+                    className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all touch-active ${
+                      isSelected
+                        ? 'bg-emerald-50/70 border-emerald-400 shadow-xs'
+                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm shrink-0 border border-emerald-200">
+                      {patient.fullName.charAt(0)}
                     </div>
-                    <p className="text-[11px] text-slate-500 font-mono-numbers mt-0.5 truncate">
-                      پرونده: {patient.fileNumber}
-                    </p>
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-xs text-slate-800 truncate">{patient.fullName}</h4>
+                        <span className="text-[10px] font-mono-numbers px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600 font-semibold">
+                          {photoCount} عکس
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-mono-numbers mt-0.5 truncate">
+                        پرونده: {patient.fileNumber}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -158,12 +221,9 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
             <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3.5">
-                  <img
-                    src={selectedPatient.avatarUrl}
-                    alt={selectedPatient.fullName}
-                    className="w-14 h-14 rounded-2xl object-cover border border-emerald-200"
-                    referrerPolicy="no-referrer"
-                  />
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white font-black flex items-center justify-center text-lg shadow-sm">
+                    {selectedPatient.fullName.charAt(0)}
+                  </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="font-bold text-base text-slate-800">{selectedPatient.fullName}</h2>
@@ -265,7 +325,7 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
             {filteredPhotos.length === 0 ? (
               <div className="p-10 text-center rounded-2xl border border-slate-200 bg-white text-slate-500">
                 <Camera className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-                <p className="font-bold text-slate-700 text-sm">تصویری با این فیلتر یافت نشد.</p>
+                <p className="font-bold text-slate-700 text-sm">هیچ عکسی برای این پرونده ثبت نشده است.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
@@ -290,7 +350,6 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
                           referrerPolicy="no-referrer"
                         />
 
-                        {/* Top Overlay Badges */}
                         <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
                           {getStageBadge(photo.stage)}
                         </div>
@@ -299,7 +358,6 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
                           {getAngleBadge(photo.angle)}
                         </div>
 
-                        {/* Compare Selector Button */}
                         <button
                           onClick={() => onToggleCompareFlag(photo.id)}
                           className={`absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs backdrop-blur-xs transition-all ${
@@ -313,7 +371,6 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
                           <span>{isFlagged ? 'نشان‌شده برای مقایسه' : 'انتخاب برای مقایسه'}</span>
                         </button>
 
-                        {/* Fullscreen icon */}
                         <button
                           onClick={() => onSelectPhotoLightbox(photo)}
                           className="absolute bottom-2.5 left-2.5 p-1.5 rounded-lg bg-white/95 text-slate-700 hover:text-emerald-600 shadow-xs transition-all opacity-0 group-hover:opacity-100"
@@ -322,14 +379,11 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
                         </button>
                       </div>
 
-                      {/* Photo Details & Clinical Notes */}
                       <div className="p-3 flex-1 flex flex-col justify-between gap-2 text-xs">
                         <div className="flex items-center justify-between text-slate-500 font-mono-numbers text-[11px]">
-                          <span>{photo.exif.cameraModel}</span>
-                          <span>{photo.exif.aperture} • ISO {photo.exif.iso}</span>
+                          <span>{photo.fileName}</span>
                         </div>
 
-                        {/* Notes field */}
                         <div>
                           {isEditing ? (
                             <div className="space-y-1.5 mt-1">
@@ -385,12 +439,114 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
             )}
           </>
         ) : (
-          <div className="p-12 text-center rounded-2xl border border-slate-200 bg-white text-slate-500">
-            <Users className="w-10 h-10 mx-auto text-slate-400 mb-2" />
-            <h3 className="font-bold text-slate-700 text-base">یک پرونده را انتخاب کنید</h3>
+          <div className="p-12 text-center rounded-2xl border border-slate-200 bg-white text-slate-500 space-y-3">
+            <Users className="w-12 h-12 mx-auto text-slate-300" />
+            <h3 className="font-bold text-slate-700 text-base">هیچ پرونده بیماری انتخاب نشده است</h3>
+            <p className="text-xs text-slate-500">برای مشاهده یا اضافه کردن بیمار، از پنل راست یک بیمار انتخاب کنید یا پرونده جدید ایجاد نمایید.</p>
+            <button
+              onClick={() => setIsNewPatientModalOpen(true)}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
+            >
+              + ایجاد پرونده بیمار جدید
+            </button>
           </div>
         )}
       </div>
+
+      {/* New Patient Registration Modal */}
+      {isNewPatientModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md shadow-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-emerald-600" />
+                ثبت پرونده بیمار جدید
+              </h3>
+              <button
+                onClick={() => setIsNewPatientModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePatient} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">نام و نام خانوادگی بیمار</label>
+                <input
+                  type="text"
+                  required
+                  value={newFullName}
+                  onChange={(e) => setNewFullName(e.target.value)}
+                  placeholder="مثال: علی محمدی"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">شماره پرونده</label>
+                  <input
+                    type="text"
+                    value={newFileNumber}
+                    onChange={(e) => setNewFileNumber(e.target.value)}
+                    placeholder="اختیاری (خودکار تولید می‌شود)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">کد ملی</label>
+                  <input
+                    type="text"
+                    value={newNationalId}
+                    onChange={(e) => setNewNationalId(e.target.value)}
+                    placeholder="اختیاری"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">سن</label>
+                  <input
+                    type="number"
+                    value={newAge}
+                    onChange={(e) => setNewAge(Number(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">نوع عمل جراحی</label>
+                  <input
+                    type="text"
+                    value={newSurgeryType}
+                    onChange={(e) => setNewSurgeryType(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewPatientModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs"
+                >
+                  {isSubmitting ? 'در حال ثبت...' : 'ثبت پرونده'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
