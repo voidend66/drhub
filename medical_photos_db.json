@@ -1,0 +1,436 @@
+{
+  "patients": [
+    {
+      "id": "p-101",
+      "fileNumber": "RH-1403-882",
+      "nationalId": "0021489931",
+      "fullName": "سارا رضایی",
+      "age": 26,
+      "gender": "female",
+      "phone": "0912-345-6789",
+      "surgeryType": "رینوپلاستی اولیه فانتزی-طبیعی (Primary Rhinoplasty + Septal Graft)",
+      "surgeryDate": "1403/03/15",
+      "surgeonName": "دکتر اکبر شهیدی پیام",
+      "medicalHistoryNotes": "انحراف سپتوم خفیف به راست، قوز استخوانی ۲.۵ میلی‌متری، نوک بینی با پتوز ملایم، پوست با ضخامت متوسط.",
+      "avatarUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80",
+      "createdAt": "2024-06-01T10:00:00Z",
+      "totalPhotosCount": 6
+    },
+    {
+      "id": "p-102",
+      "fileNumber": "RH-1403-914",
+      "nationalId": "0018934522",
+      "fullName": "امیرحسین مرادی",
+      "age": 31,
+      "gender": "male",
+      "phone": "0935-887-2100",
+      "surgeryType": "سپتورینوپلاستی استخوانی مردانه طبیعی (Preservation Rhinoplasty)",
+      "surgeryDate": "1403/04/20",
+      "surgeonName": "دکتر اکبر شهیدی پیام",
+      "medicalHistoryNotes": "سابقه شکستگی ورزشی بینی، انسداد تنفسی سمت چپ، استخوان‌های پهن و نیاز به استئوتومی لترال و دورسوم صاف بدون قوس زنانه.",
+      "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
+      "createdAt": "2024-07-05T11:30:00Z",
+      "totalPhotosCount": 4
+    },
+    {
+      "id": "p-103",
+      "fileNumber": "RH-1403-950",
+      "nationalId": "0076210984",
+      "fullName": "نیلوفر صادقی",
+      "age": 29,
+      "gender": "female",
+      "phone": "0919-445-1290",
+      "surgeryType": "رینوپلاستی بینی گوشتی با پیوند غضروفی (Thick Skin Rhinoplasty)",
+      "surgeryDate": "1403/05/02",
+      "surgeonName": "دکتر اکبر شهیدی پیام",
+      "medicalHistoryNotes": "پوست ضخیم سباسه در یک‌سوم تحتانی، نیاز به تقویت ساختاری کلوملا و کاهش پهنای آلار و تریفای نوک بینی.",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+      "createdAt": "2024-07-20T09:15:00Z",
+      "totalPhotosCount": 5
+    }
+  ],
+  "photos": [
+    {
+      "id": "img-101-pre-profile-r",
+      "patientId": "p-101",
+      "fileName": "DSC_0481_RAW.JPG",
+      "filePath": "medical_storage/raw_uploads/p-101/DSC_0481_RAW.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2024-06-01T10:14:22Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -48
+      },
+      "angle": "profile_right",
+      "stage": "pre_op",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "16.4 MB",
+        "colorSpace": "sRGB IEC61966-2.1",
+        "flash": true
+      },
+      "clinicalNotes": {
+        "humpReduction": "قوز استخوانی ۲.۵mm در دورسوم بالا",
+        "tipRotation": 88,
+        "nasolabialAngle": 90,
+        "dorsumProfile": "Straight",
+        "skinThickness": "Medium",
+        "customNotes": "پتوز نسبی نوک هنگام خنده. نیاز به تقویت زاویه کلوملا-لبیال.",
+        "recordedBy": "دکتر اکبر شهیدی پیام",
+        "updatedAt": "1403/03/10"
+      },
+      "isFlaggedForComparison": true
+    },
+    {
+      "id": "img-101-post-profile-r",
+      "patientId": "p-101",
+      "fileName": "DSC_0920_POST_6M.JPG",
+      "filePath": "medical_storage/raw_uploads/p-101/DSC_0920_POST_6M.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2024-12-05T11:45:10Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -45
+      },
+      "angle": "profile_right",
+      "stage": "6_months",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "15.8 MB",
+        "colorSpace": "sRGB IEC61966-2.1",
+        "flash": true
+      },
+      "clinicalNotes": {
+        "humpReduction": "رفع کامل قوز با تراش ظریف",
+        "tipRotation": 104,
+        "nasolabialAngle": 105,
+        "dorsumProfile": "Slight Natural Curve",
+        "skinThickness": "Medium",
+        "customNotes": "قوس ملایم بسیار مطلوب، پایداری کلوملار استروت عالی، تورم برطرف شده.",
+        "recordedBy": "دکتر اکبر شهیدی پیام",
+        "updatedAt": "1403/09/15"
+      },
+      "isFlaggedForComparison": true
+    },
+    {
+      "id": "img-101-pre-frontal",
+      "patientId": "p-101",
+      "fileName": "DSC_0480_RAW.JPG",
+      "filePath": "medical_storage/raw_uploads/p-101/DSC_0480_RAW.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2024-06-01T10:12:00Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -48
+      },
+      "angle": "frontal",
+      "stage": "pre_op",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "16.1 MB",
+        "colorSpace": "sRGB",
+        "flash": true
+      },
+      "clinicalNotes": {
+        "customNotes": "ارزیابی خطوط استتیک ابرو-نوک بینی (Dorsal Aesthetic Lines)، عدم تقارن جزئی پره سمت چپ.",
+        "recordedBy": "دکتر اکبر شهیدی پیام"
+      }
+    },
+    {
+      "id": "img-101-post-frontal",
+      "patientId": "p-101",
+      "fileName": "DSC_0919_POST_6M.JPG",
+      "filePath": "medical_storage/raw_uploads/p-101/DSC_0919_POST_6M.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2024-12-05T11:42:00Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -45
+      },
+      "angle": "frontal",
+      "stage": "6_months",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "15.9 MB",
+        "colorSpace": "sRGB",
+        "flash": true
+      },
+      "clinicalNotes": {
+        "customNotes": "تقارن عالی در نمای روبه‌رو، خطوط استتیک پیوسته و زیبا.",
+        "recordedBy": "دکتر اکبر شهیدی پیام"
+      }
+    },
+    {
+      "id": "img-101-intra-op",
+      "patientId": "p-101",
+      "fileName": "OR2_CAM_0182.JPG",
+      "filePath": "medical_storage/raw_uploads/p-101/OR2_CAM_0182.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2024-06-15T09:40:00Z",
+      "sourceCamera": {
+        "name": "Canon EOS R6 (OR-2)",
+        "location": "اتاق عمل شماره ۲",
+        "ipAddress": "192.168.1.185",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -52
+      },
+      "angle": "profile_right",
+      "stage": "intra_op",
+      "exif": {
+        "cameraModel": "Canon EOS R6",
+        "lensModel": "RF 24-70mm F2.8 L IS USM",
+        "iso": 400,
+        "aperture": "f/5.6",
+        "shutterSpeed": "1/200s",
+        "focalLength": "70.0mm",
+        "resolution": "5472 x 3648 (20MP)",
+        "fileSize": "11.2 MB",
+        "colorSpace": "sRGB",
+        "flash": false
+      },
+      "clinicalNotes": {
+        "graftType": "سپتال کارتیلیج استروت + کلوملا اسپلینت",
+        "customNotes": "قرارگیری دقیق گرافت استروت جهت کنترل پروجکشن قبل از بستن اینسیژن.",
+        "recordedBy": "دکتر اکبر شهیدی پیام"
+      }
+    },
+    {
+      "id": "img-101-basal",
+      "patientId": "p-101",
+      "fileName": "DSC_0485_BASAL.JPG",
+      "filePath": "medical_storage/raw_uploads/p-101/DSC_0485_BASAL.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2024-06-01T10:16:00Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -48
+      },
+      "angle": "basal",
+      "stage": "pre_op",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "15.6 MB",
+        "colorSpace": "sRGB",
+        "flash": true
+      },
+      "clinicalNotes": {
+        "customNotes": "مثلث ایزوسل کلوملا، پایش ضخامت سوراخ‌ها و عدم تقارن پایه پره‌ها.",
+        "recordedBy": "دکتر اکبر شهیدی پیام"
+      }
+    },
+    {
+      "id": "img-102-pre-profile-r",
+      "patientId": "p-102",
+      "fileName": "DSC_1102_RAW.JPG",
+      "filePath": "medical_storage/raw_uploads/p-102/DSC_1102_RAW.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2024-07-05T11:35:00Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -47
+      },
+      "angle": "profile_right",
+      "stage": "pre_op",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "16.8 MB",
+        "colorSpace": "sRGB",
+        "flash": true
+      },
+      "clinicalNotes": {
+        "humpReduction": "قوز استخوانی-غضروفی ۳ میلی‌متر",
+        "tipRotation": 92,
+        "nasolabialAngle": 92,
+        "dorsumProfile": "Straight",
+        "skinThickness": "Medium",
+        "customNotes": "فرم بینی کاملاً مردانه حفظ شود بدون چرخش بیش از حد نوک.",
+        "recordedBy": "دکتر اکبر شهیدی پیام"
+      },
+      "isFlaggedForComparison": true
+    },
+    {
+      "id": "img-102-post-profile-r",
+      "patientId": "p-102",
+      "fileName": "DSC_1840_POST_3M.JPG",
+      "filePath": "medical_storage/raw_uploads/p-102/DSC_1840_POST_3M.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2024-10-25T14:10:00Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -46
+      },
+      "angle": "profile_right",
+      "stage": "3_months",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "16.2 MB",
+        "colorSpace": "sRGB",
+        "flash": true
+      },
+      "clinicalNotes": {
+        "humpReduction": "حذف کامل قوز و حفظ دورسوم کاملاً صاف",
+        "tipRotation": 96,
+        "nasolabialAngle": 96,
+        "dorsumProfile": "Straight",
+        "skinThickness": "Medium",
+        "customNotes": "نتیجه ایده‌آل مردانه با تقارن عالی و تنفس کامل باز.",
+        "recordedBy": "دکتر اکبر شهیدی پیام"
+      },
+      "isFlaggedForComparison": true
+    },
+    {
+      "id": "inbox-live-001",
+      "patientId": null,
+      "fileName": "DSC09942_RAW.JPG",
+      "filePath": "medical_storage/raw_uploads/incoming/DSC09942_RAW.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2026-08-22T15:58:42.349Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک (Studio A)",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -44
+      },
+      "angle": "unassigned",
+      "stage": "unassigned",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "17.4 MB",
+        "colorSpace": "sRGB IEC61966-2.1",
+        "flash": true
+      },
+      "clinicalNotes": {},
+      "aiSuggestedAngle": "profile_right",
+      "aiSuggestedConfidence": 94
+    },
+    {
+      "id": "inbox-live-002",
+      "patientId": null,
+      "fileName": "DSC09943_RAW.JPG",
+      "filePath": "medical_storage/raw_uploads/incoming/DSC09943_RAW.JPG",
+      "thumbnailUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80",
+      "highResUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1600&q=85",
+      "uploadTimestamp": "2026-08-22T16:00:42.349Z",
+      "sourceCamera": {
+        "name": "Sony α7 IV (Studio-A)",
+        "location": "استودیو عکاسی کلینیک (Studio A)",
+        "ipAddress": "192.168.1.180",
+        "ftpPort": 2121,
+        "wifiSignalDbm": -43
+      },
+      "angle": "unassigned",
+      "stage": "unassigned",
+      "exif": {
+        "cameraModel": "ILCE-7M4",
+        "lensModel": "FE 85mm F1.4 GM",
+        "iso": 100,
+        "aperture": "f/8.0",
+        "shutterSpeed": "1/160s",
+        "focalLength": "85.0mm",
+        "resolution": "7008 x 4672 (33MP)",
+        "fileSize": "16.9 MB",
+        "colorSpace": "sRGB IEC61966-2.1",
+        "flash": true
+      },
+      "clinicalNotes": {},
+      "aiSuggestedAngle": "frontal",
+      "aiSuggestedConfidence": 96
+    }
+  ],
+  "telemetry": {
+    "cpuTemperatureC": 43.8,
+    "cpuUsagePercent": 14,
+    "ramUsageMb": 1420,
+    "ramTotalMb": 3880,
+    "diskUsedGb": 18.4,
+    "diskTotalGb": 128,
+    "ftpServerOnline": true,
+    "ftpPort": 2121,
+    "ftpStoragePath": "/home/pi/medical_storage/raw_uploads",
+    "cameraConnected": true,
+    "cameraName": "Sony Alpha 7 IV (Wi-Fi Studio-A)",
+    "cameraBattery": 88,
+    "localIp": "192.168.1.150:3000",
+    "uptimeSeconds": 142980,
+    "lastPhotoReceivedTime": "2026-08-22T16:00:42.349Z"
+  }
+}
