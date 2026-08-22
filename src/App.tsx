@@ -9,6 +9,7 @@ import { LiveAlertToast } from './components/LiveAlertToast';
 import { InboxView } from './components/InboxView';
 import { PatientGalleryView } from './components/PatientGalleryView';
 import { BeforeAfterView } from './components/BeforeAfterView';
+import { FileManagerView } from './components/FileManagerView';
 import { TagPhotoModal } from './components/TagPhotoModal';
 import { PhotoLightboxModal } from './components/PhotoLightboxModal';
 import { FtpSettingsModal, FtpConfigData } from './components/FtpSettingsModal';
@@ -19,16 +20,21 @@ import { medicalAudio } from './utils/audioAlert';
 const DEFAULT_FTP_CONFIG: FtpConfigData = {
   ipAddress: '192.168.1.150',
   port: 2121,
-  username: 'clinic_camera',
-  password: '••••••••',
-  storagePath: '/var/clinic_photos/rhinoplasty_raw',
+  username: 'anonymous',
+  password: '',
+  allowAnonymous: true,
+  securityMode: 'plain',
+  requireCertificate: false,
+  storagePath: '/home/pi/medical_storage/raw_uploads',
   autoOrganizeByDate: true,
   passiveMode: true,
+  passivePortRange: '50000-50100',
+  maxFileSizeMb: 100
 };
 
 export default function App() {
-  // Navigation: 3 Essential Doctor Views
-  const [activeTab, setActiveTab] = useState<'inbox' | 'patients' | 'compare'>('inbox');
+  // Navigation: 4 Views
+  const [activeTab, setActiveTab] = useState<'inbox' | 'patients' | 'compare' | 'explorer'>('inbox');
   
   // Data States
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
@@ -50,16 +56,20 @@ export default function App() {
   const [comparePrePhotoId, setComparePrePhotoId] = useState<string | undefined>(undefined);
   const [comparePostPhotoId, setComparePostPhotoId] = useState<string | undefined>(undefined);
 
-  // Fetch initial data from local server
+  // Fetch initial data & FTP config from local server
   const loadServerData = useCallback(async () => {
     try {
-      const [ptsRes, ptsPhotos] = await Promise.all([
+      const [ptsRes, ptsPhotos, cfgRes] = await Promise.all([
         fetch('/api/ftp/patients').then((r) => r.ok ? r.json() : INITIAL_PATIENTS),
         fetch('/api/ftp/photos').then((r) => r.ok ? r.json() : INITIAL_PHOTOS),
+        fetch('/api/ftp/config').then((r) => r.ok ? r.json() : null).catch(() => null),
       ]);
 
       if (Array.isArray(ptsRes)) setPatients(ptsRes);
       if (Array.isArray(ptsPhotos)) setPhotos(ptsPhotos);
+      if (cfgRes && typeof cfgRes === 'object') {
+        setFtpConfig(prev => ({ ...prev, ...cfgRes }));
+      }
     } catch (e) {
       console.warn('Using local fallback state:', e);
     }
@@ -152,7 +162,6 @@ export default function App() {
 
   // Delete raw photo
   const handleDeletePhoto = async (photoId: string) => {
-    if (!window.confirm('آیا از حذف این تصویر مطمئن هستید؟')) return;
     try {
       await fetch(`/api/ftp/photos/${photoId}`, { method: 'DELETE' });
     } catch (e) {}
@@ -203,10 +212,27 @@ export default function App() {
     );
   };
 
-  // Save FTP config
-  const handleSaveFtpConfig = (newConfig: FtpConfigData) => {
+  // Save FTP config to server & local storage
+  const handleSaveFtpConfig = async (newConfig: FtpConfigData) => {
     setFtpConfig(newConfig);
     localStorage.setItem('ftp_config', JSON.stringify(newConfig));
+    try {
+      await fetch('/api/ftp/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newConfig)
+      });
+    } catch (e) {
+      console.warn('Could not save FTP config to server:', e);
+    }
+  };
+
+  // When real photos are uploaded via drag & drop or file picker
+  const handlePhotosUploaded = (newPhotos: MedicalPhoto[]) => {
+    setPhotos((prev) => [...newPhotos, ...prev]);
+    if (soundEnabled && newPhotos.length > 0) {
+      medicalAudio.playNewPhotoChime();
+    }
   };
 
   // Navigate to compare view with specific pair
@@ -219,7 +245,7 @@ export default function App() {
   const inboxPhotos = photos.filter((p) => !p.patientId || p.patientId === 'unassigned');
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col selection:bg-emerald-600 selection:text-white">
       
       {/* Clean Clinical Header with Navigation & FTP Settings */}
       <Header
@@ -229,6 +255,8 @@ export default function App() {
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
         onOpenFtpSettings={() => setIsFtpSettingsOpen(true)}
+        serverIp={ftpConfig.ipAddress}
+        serverPort={ftpConfig.port}
       />
 
       {/* Live Toast Notification on New Photo */}
@@ -246,6 +274,10 @@ export default function App() {
             onOpenTagModal={(photo) => setTaggingPhoto(photo)}
             onDeletePhoto={handleDeletePhoto}
             onSelectPhotoLightbox={(photo) => setLightboxPhoto(photo)}
+            onPhotosUploaded={handlePhotosUploaded}
+            ftpStoragePath={ftpConfig.storagePath}
+            ftpPort={ftpConfig.port}
+            allowAnonymous={ftpConfig.allowAnonymous}
           />
         )}
 
@@ -269,6 +301,23 @@ export default function App() {
             selectedPatientId={selectedPatient?.id}
             initialPrePhotoId={comparePrePhotoId}
             initialPostPhotoId={comparePostPhotoId}
+          />
+        )}
+
+        {activeTab === 'explorer' && (
+          <FileManagerView
+            currentActiveStoragePath={ftpConfig.storagePath}
+            onSetActiveStoragePath={(newPath) => {
+              const updated = { ...ftpConfig, storagePath: newPath };
+              handleSaveFtpConfig(updated);
+            }}
+            onOpenTagModal={(photo) => setTaggingPhoto(photo)}
+            onSelectPhotoLightbox={(photo) => setLightboxPhoto(photo)}
+            allPhotos={photos}
+            patients={patients}
+            onPhotosUploaded={handlePhotosUploaded}
+            serverIp={ftpConfig.ipAddress}
+            serverPort={ftpConfig.port}
           />
         )}
       </main>
@@ -306,7 +355,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>سامانه دریافت خودکار و آرشیو تصاویر جراحی رینوپلاستی کلینیک</span>
           <span className="font-mono-numbers text-slate-600">
-            سرور FTP: فعال روی پورت {ftpConfig.port} ({ftpConfig.ipAddress})
+            سرور FTP: فعال روی پورت {ftpConfig.port} ({ftpConfig.ipAddress}) • {ftpConfig.allowAnonymous ? 'Anonymous' : 'User Auth'} • {ftpConfig.securityMode === 'plain' ? 'Plain FTP (بدون نیاز به گواهی)' : 'FTPS'}
           </span>
         </div>
       </footer>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Check, 
@@ -32,20 +32,31 @@ export const TagPhotoModal: React.FC<TagPhotoModalProps> = ({
   onClose,
   onSave,
 }) => {
-  if (!photo) return null;
-
   const [selectedPatientId, setSelectedPatientId] = useState<string>(
-    photo.patientId || patients[0]?.id || ''
+    photo?.patientId || patients[0]?.id || ''
   );
   const [selectedStage, setSelectedStage] = useState<SurgeryStage>(
-    photo.stage !== 'unassigned' ? photo.stage : 'pre_op'
+    photo?.stage && photo.stage !== 'unassigned' ? photo.stage : 'pre_op'
   );
   const [selectedAngle, setSelectedAngle] = useState<PhotoAngle>(
-    photo.angle !== 'unassigned' ? photo.angle : 'frontal'
+    photo?.angle && photo.angle !== 'unassigned' ? photo.angle : 'frontal'
   );
-  const [notes, setNotes] = useState<string>(photo.clinicalNotes.customNotes || '');
-  const [humpReduction, setHumpReduction] = useState<string>(photo.clinicalNotes.humpReduction || '');
-  const [tipRotation, setTipRotation] = useState<number>(photo.clinicalNotes.tipRotation || 95);
+  const [notes, setNotes] = useState<string>(photo?.clinicalNotes?.customNotes || '');
+  const [humpReduction, setHumpReduction] = useState<string>(photo?.clinicalNotes?.humpReduction || '');
+  const [tipRotation, setTipRotation] = useState<number>(photo?.clinicalNotes?.tipRotation || 95);
+
+  useEffect(() => {
+    if (photo) {
+      setSelectedPatientId(photo.patientId || patients[0]?.id || '');
+      setSelectedStage(photo.stage && photo.stage !== 'unassigned' ? photo.stage : 'pre_op');
+      setSelectedAngle(photo.angle && photo.angle !== 'unassigned' ? photo.angle : 'frontal');
+      setNotes(photo.clinicalNotes?.customNotes || '');
+      setHumpReduction(photo.clinicalNotes?.humpReduction || '');
+      setTipRotation(photo.clinicalNotes?.tipRotation || 95);
+    }
+  }, [photo, patients]);
+
+  if (!photo) return null;
 
   const handleSave = () => {
     if (!selectedPatientId) return;

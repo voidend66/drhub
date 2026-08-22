@@ -6,16 +6,19 @@ import {
   Columns, 
   Volume2, 
   VolumeX, 
-  Settings
+  Settings,
+  FolderTree
 } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'inbox' | 'patients' | 'compare';
-  setActiveTab: (tab: 'inbox' | 'patients' | 'compare') => void;
+  activeTab: 'inbox' | 'patients' | 'compare' | 'explorer';
+  setActiveTab: (tab: 'inbox' | 'patients' | 'compare' | 'explorer') => void;
   inboxCount: number;
   soundEnabled: boolean;
   onToggleSound: () => void;
   onOpenFtpSettings: () => void;
+  serverIp: string;
+  serverPort: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,6 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
   soundEnabled,
   onToggleSound,
   onOpenFtpSettings,
+  serverIp,
+  serverPort,
 }) => {
   return (
     <header id="clinical-header" className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs px-4 lg:px-6 py-2.5">
@@ -45,10 +50,16 @@ export const Header: React.FC<HeaderProps> = ({
                   دکتر اکبر شهیدی پیام
                 </p>
               </div>
-              <span className="px-2 py-0.5 text-[11px] font-mono-numbers rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold flex items-center gap-1.5 self-center">
+              
+              {/* Server Status Pill (Clickable to open FTP setup) */}
+              <button
+                onClick={onOpenFtpSettings}
+                title="مشاهده تنظیمات و تست آنلاین سرور FTP"
+                className="px-2 py-0.5 text-[11px] font-mono-numbers rounded-full bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 font-semibold flex items-center gap-1.5 self-center transition-colors"
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                FTP فعال
-              </span>
+                <span>FTP {serverPort}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -58,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="tab-inbox"
             onClick={() => setActiveTab('inbox')}
-            className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all touch-active whitespace-nowrap ${
+            className={`relative flex items-center gap-2 px-3.5 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all touch-active whitespace-nowrap ${
               activeTab === 'inbox'
                 ? 'bg-white text-emerald-800 shadow-xs font-bold border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -76,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="tab-patients"
             onClick={() => setActiveTab('patients')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all touch-active whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all touch-active whitespace-nowrap ${
               activeTab === 'patients'
                 ? 'bg-white text-emerald-800 shadow-xs font-bold border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -89,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="tab-compare"
             onClick={() => setActiveTab('compare')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all touch-active whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all touch-active whitespace-nowrap ${
               activeTab === 'compare'
                 ? 'bg-white text-emerald-800 shadow-xs font-bold border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -97,6 +108,20 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Columns className={`w-4 h-4 ${activeTab === 'compare' ? 'text-emerald-600' : 'text-slate-500'}`} />
             <span>مقایسه قبل و بعد</span>
+          </button>
+
+          {/* New: File Manager Tab */}
+          <button
+            id="tab-explorer"
+            onClick={() => setActiveTab('explorer')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all touch-active whitespace-nowrap ${
+              activeTab === 'explorer'
+                ? 'bg-white text-emerald-800 shadow-xs font-bold border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+            }`}
+          >
+            <FolderTree className={`w-4 h-4 ${activeTab === 'explorer' ? 'text-emerald-600' : 'text-slate-500'}`} />
+            <span>مدیریت پوشه‌ها (Explorer)</span>
           </button>
         </nav>
 
@@ -130,4 +155,5 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
 

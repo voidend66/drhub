@@ -193,11 +193,6 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, photo, isFullscreen, toggleFullscreen, handleNextPhoto, handlePrevPhoto, onClose]);
 
-  if (!isOpen || !photo) return null;
-
-  const angleObj = CLINICAL_ANGLES.find((a) => a.id === photo.angle);
-  const stageObj = SURGERY_STAGES.find((s) => s.id === photo.stage);
-
   const handleReset = () => {
     setZoom(1);
     setRotation(0);
@@ -250,6 +245,11 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
       setPanPosition({ x: 0, y: 0 });
     }
   };
+
+  if (!isOpen || !photo) return null;
+
+  const angleObj = CLINICAL_ANGLES.find((a) => a.id === photo.angle);
+  const stageObj = SURGERY_STAGES.find((s) => s.id === photo.stage);
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center ${isFullscreen ? 'p-0 bg-black' : 'p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md'} animate-in fade-in duration-200`}>

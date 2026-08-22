@@ -97,12 +97,41 @@ export interface PiSystemTelemetry {
   ftpServerOnline: boolean;
   ftpPort: number;
   ftpStoragePath: string;
+  allowAnonymous: boolean;
+  securityMode: 'plain' | 'ftps_explicit';
+  requireCertificate: boolean;
   cameraConnected: boolean;
   cameraName: string;
   cameraBattery: number;
   localIp: string;
   uptimeSeconds: number;
   lastPhotoReceivedTime: string;
+}
+
+export interface FtpLogEntry {
+  id: string;
+  timestamp: string;
+  clientIp: string;
+  clientName: string;
+  action: 'CONNECT' | 'LOGIN_ANON' | 'LOGIN_USER' | 'STOR_START' | 'STOR_COMPLETE' | 'DISCONNECT' | 'ERROR';
+  fileName?: string;
+  fileSize?: string;
+  details: string;
+  isSuccess: boolean;
+}
+
+export interface FtpConnectionTestResult {
+  isSuccess: boolean;
+  checkedAt: string;
+  host: string;
+  port: number;
+  authMode: 'anonymous' | 'authenticated';
+  security: 'plain' | 'ftps';
+  certificateRequired: boolean;
+  storagePathWritable: boolean;
+  storagePathResolved: string;
+  freeDiskSpaceGb: number;
+  logs: string[];
 }
 
 export interface AngleInfo {
@@ -120,4 +149,32 @@ export interface StageInfo {
   labelEn: string;
   colorClass: string;
   descriptionFa: string;
+}
+
+export interface FileItem {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  sizeBytes?: number;
+  sizeFormatted?: string;
+  modifiedAt?: string;
+  extension?: string;
+  isImage?: boolean;
+  thumbnailUrl?: string;
+  itemsCount?: number;
+  patientId?: string;
+  stage?: SurgeryStage;
+  angle?: PhotoAngle;
+  isSystem?: boolean;
+}
+
+export interface DirectoryListing {
+  currentPath: string;
+  parentPath: string | null;
+  items: FileItem[];
+  totalFiles: number;
+  totalFolders: number;
+  totalSizeBytes: number;
+  isWritable: boolean;
+  freeSpaceGb?: number;
 }
