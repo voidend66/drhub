@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { 
   Camera, 
   Tag, 
@@ -117,12 +116,9 @@ export const InboxView: React.FC<InboxViewProps> = ({
         /* Photos Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {inboxPhotos.map((photo) => (
-            <motion.div
-              layout
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
+            <div
               key={photo.id}
-              className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex flex-col group"
+              className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex flex-col group animate-in fade-in duration-200"
             >
               {/* Photo Image Card */}
               <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden cursor-pointer">
@@ -181,7 +177,7 @@ export const InboxView: React.FC<InboxViewProps> = ({
                 </div>
 
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       )}

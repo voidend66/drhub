@@ -159,6 +159,23 @@ export default function App() {
     setPhotos((prev) => prev.filter((p) => p.id !== photoId));
   };
 
+  // Update photo angle
+  const handleUpdateAngle = async (photoId: string, angle: PhotoAngle) => {
+    try {
+      await fetch(`/api/ftp/photos/${photoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ angle }),
+      });
+    } catch (e) {}
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === photoId ? { ...p, angle } : p))
+    );
+    if (lightboxPhoto && lightboxPhoto.id === photoId) {
+      setLightboxPhoto((prev) => (prev ? { ...prev, angle } : null));
+    }
+  };
+
   // Update notes
   const handleUpdateNotes = async (photoId: string, notes: string) => {
     try {
@@ -264,13 +281,16 @@ export default function App() {
         onSave={handleSaveTag}
       />
 
-      {/* Modal: Lightbox High-Res EXIF Inspector */}
+      {/* Modal: Lightbox High-Res EXIF Inspector & Fullscreen */}
       <PhotoLightboxModal
         photo={lightboxPhoto}
+        photos={photos}
         patient={patients.find((p) => p.id === lightboxPhoto?.patientId)}
         isOpen={Boolean(lightboxPhoto)}
         onClose={() => setLightboxPhoto(null)}
+        onSelectPhoto={(photo) => setLightboxPhoto(photo)}
         onOpenTagModal={(photo) => setTaggingPhoto(photo)}
+        onUpdateAngle={handleUpdateAngle}
       />
 
       {/* Modal: FTP Server & Wi-Fi Camera Setup */}

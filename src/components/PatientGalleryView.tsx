@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { 
   Users, 
   Search, 
@@ -275,10 +274,9 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
                   const isEditing = editingPhotoId === photo.id;
 
                   return (
-                    <motion.div
-                      layout
+                    <div
                       key={photo.id}
-                      className={`bg-white border rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col ${
+                      className={`bg-white border rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col animate-in fade-in duration-200 ${
                         isFlagged ? 'border-emerald-500 ring-2 ring-emerald-300' : 'border-slate-200'
                       }`}
                     >
@@ -380,7 +378,7 @@ export const PatientGalleryView: React.FC<PatientGalleryViewProps> = ({
                         </div>
 
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
