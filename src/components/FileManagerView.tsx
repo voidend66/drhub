@@ -158,38 +158,39 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
   // Quick shortcuts in left sidebar
   const QUICK_SHORTCUTS = [
     {
-      title: 'هارد اکسترنال کلینیک (HDD 2TB)',
-      path: '/media/pi/hdd_medical',
+      title: 'هارد اکسترنال کلینیک (fstab)',
+      path: '/mnt/external_hdd/medical_photos',
       icon: <HardDrive className="w-4 h-4 text-emerald-600" />,
-      badge: 'اصلی',
+      badge: 'HDD',
       badgeColor: 'bg-emerald-100 text-emerald-800',
     },
     {
-      title: 'مسیر فعال پردازش عکس‌ها',
+      title: 'هارد اکسترنال دسکتاپ (Raspberry Pi OS)',
+      path: '/media/pi/hdd_medical',
+      icon: <HardDrive className="w-4 h-4 text-emerald-600" />,
+      badge: 'Desktop',
+      badgeColor: 'bg-emerald-100 text-emerald-800',
+    },
+    {
+      title: 'مسیر فعال پردازش شاتر',
       path: currentActiveStoragePath,
       icon: <FolderSync className="w-4 h-4 text-emerald-600" />,
       badge: 'فعال',
       badgeColor: 'bg-emerald-100 text-emerald-800',
     },
     {
-      title: 'صندوق ورودی خام (Incoming)',
-      path: '/media/pi/hdd_medical/incoming',
-      icon: <Camera className="w-4 h-4 text-sky-600" />,
-    },
-    {
-      title: 'پوشه کلیه بیماران (Patients)',
-      path: '/media/pi/hdd_medical/patients',
-      icon: <Layers className="w-4 h-4 text-indigo-600" />,
-    },
-    {
-      title: 'حافظه داخلی رزبری‌پای',
-      path: '/home/pi/medical_storage',
+      title: 'حافظه داخلی رزبری‌پای (MicroSD/SSD)',
+      path: '/var/app_data/medical_storage',
       icon: <HardDrive className="w-4 h-4 text-slate-600" />,
+      badge: 'Internal',
+      badgeColor: 'bg-slate-200 text-slate-700',
     },
     {
-      title: 'حافظه فلش USB',
-      path: '/media/pi/sandisk_usb_64gb',
-      icon: <HardDrive className="w-4 h-4 text-amber-600" />,
+      title: 'حافظه محلی پروژه',
+      path: './medical_storage',
+      icon: <HardDrive className="w-4 h-4 text-slate-600" />,
+      badge: 'App Dir',
+      badgeColor: 'bg-slate-200 text-slate-700',
     },
   ];
 

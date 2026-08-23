@@ -87,6 +87,18 @@ export interface Patient {
   totalPhotosCount?: number;
 }
 
+export interface StoragePartitionInfo {
+  path: string;
+  totalGb: number;
+  freeGb: number;
+  usedGb: number;
+  usagePercent: number;
+  isWritable: boolean;
+  exists: boolean;
+  storageType: 'internal_sd' | 'external_hdd';
+  storageTypeLabel: string;
+}
+
 export interface PiSystemTelemetry {
   cpuTemperatureC: number;
   cpuUsagePercent: number;
@@ -96,13 +108,20 @@ export interface PiSystemTelemetry {
   diskTotalGb: number;
   activeDriveName: string;
   activeDrivePath: string;
-  driveStatus: 'connected' | 'syncing' | 'idle' | 'warning';
+  driveStatus: 'connected' | 'syncing' | 'idle' | 'warning' | 'disconnected';
   cameraConnected: boolean;
   cameraName: string;
   cameraBattery: number;
   localIp: string;
   uptimeSeconds: number;
   lastPhotoReceivedTime: string;
+  storageType?: 'internal_sd' | 'external_hdd';
+  storageTypeLabel?: string;
+  diskFreeGb?: number;
+  diskUsagePercent?: number;
+  internalStorage?: StoragePartitionInfo;
+  externalStorage?: StoragePartitionInfo;
+  isDiskUsageHigh?: boolean;
 }
 
 export interface DriveStorageConfig {
@@ -112,6 +131,8 @@ export interface DriveStorageConfig {
   autoOrganizeByDate: boolean;
   autoIndexPatients: boolean;
   diskSpaceAlertThresholdGb: number;
+  maxDiskUsagePercent?: number;
+  tempPath?: string;
 }
 
 export type LogLevel = 'INFO' | 'SUCCESS' | 'WARN' | 'ERROR' | 'DRIVE';

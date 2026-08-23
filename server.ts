@@ -2,14 +2,23 @@ import express, { Response } from "express";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import { execSync } from "child_process";
 import { createServer as createViteServer } from "vite";
 import { INITIAL_PATIENTS, INITIAL_PHOTOS, INITIAL_PI_TELEMETRY } from "./src/data/seedData";
-import { Patient, MedicalPhoto, PiSystemTelemetry, DriveStorageConfig, SystemLogEntry, LogLevel, DriveScanResult, DirectoryListing, FileItem } from "./src/types";
+import { Patient, MedicalPhoto, PiSystemTelemetry, DriveStorageConfig, SystemLogEntry, LogLevel, DriveScanResult, DirectoryListing, FileItem, StoragePartitionInfo } from "./src/types";
 
 const DB_FILE_PATH = path.join(process.cwd(), "medical_photos_db.json");
-const DEFAULT_STORAGE_DIR = path.join(process.cwd(), "medical_storage");
 
-// Ensure physical medical storage directory exists on disk
+// Raspberry Pi Storage Guidelines Configuration from Environment Variables
+const ENV_STORAGE_PATH = process.env.STORAGE_PATH || process.env.ACTIVE_STORAGE_PATH;
+const ENV_TEMP_PATH = process.env.TEMP_PATH || "/tmp/app_cache";
+const MAX_DISK_USAGE_PERCENT = parseInt(process.env.MAX_DISK_USAGE_PERCENT || "90", 10);
+
+const DEFAULT_STORAGE_DIR = ENV_STORAGE_PATH
+  ? path.resolve(ENV_STORAGE_PATH)
+  : path.join(process.cwd(), "medical_storage");
+
+// Ensure physical medical storage directory and cache directory exist on disk
 function ensureStorageDirectories(basePath: string) {
   try {
     if (!fs.existsSync(basePath)) {
@@ -21,6 +30,11 @@ function ensureStorageDirectories(basePath: string) {
     if (!fs.existsSync(incomingDir)) fs.mkdirSync(incomingDir, { recursive: true });
     if (!fs.existsSync(patientsDir)) fs.mkdirSync(patientsDir, { recursive: true });
     if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir, { recursive: true });
+    
+    // Ensure temp directory exists
+    if (!fs.existsSync(ENV_TEMP_PATH)) {
+      fs.mkdirSync(ENV_TEMP_PATH, { recursive: true });
+    }
   } catch (err) {
     console.warn("Storage init notice:", err);
   }
@@ -28,13 +42,80 @@ function ensureStorageDirectories(basePath: string) {
 
 ensureStorageDirectories(DEFAULT_STORAGE_DIR);
 
+// Real Hardware Storage Space Stats (Node statfsSync / shell df)
+function getStorageSpaceStats(targetPath: string): StoragePartitionInfo {
+  const normPath = path.resolve(targetPath);
+  const exists = fs.existsSync(normPath);
+  let totalGb = 0;
+  let freeGb = 0;
+  let usedGb = 0;
+  let usagePercent = 0;
+  let isWritable = false;
+
+  const isExternal = normPath.startsWith('/mnt') || normPath.startsWith('/media') || normPath.startsWith('/Volumes');
+  const storageType: 'internal_sd' | 'external_hdd' = isExternal ? 'external_hdd' : 'internal_sd';
+  const storageTypeLabel = isExternal ? 'هارد اکسترنال (USB HDD/SSD)' : 'حافظه داخلی رزبری‌پای (MicroSD/Internal SSD)';
+
+  if (exists) {
+    try {
+      if (typeof (fs as any).statfsSync === 'function') {
+        const stats = (fs as any).statfsSync(normPath);
+        const bsize = stats.bsize || 4096;
+        const totalBytes = stats.blocks * bsize;
+        const freeBytes = stats.bavail * bsize;
+        const usedBytes = totalBytes - freeBytes;
+        
+        totalGb = +(totalBytes / (1024 * 1024 * 1024)).toFixed(1);
+        freeGb = +(freeBytes / (1024 * 1024 * 1024)).toFixed(1);
+        usedGb = +(usedBytes / (1024 * 1024 * 1024)).toFixed(1);
+        usagePercent = totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0;
+      }
+    } catch (e) {
+      try {
+        const dfOut = execSync(`df -m "${normPath}" | tail -1`, { encoding: 'utf-8' });
+        const cols = dfOut.trim().split(/\s+/);
+        if (cols.length >= 4) {
+          const totalMb = parseInt(cols[1], 10);
+          const usedMb = parseInt(cols[2], 10);
+          const freeMb = parseInt(cols[3], 10);
+          totalGb = +(totalMb / 1024).toFixed(1);
+          freeGb = +(freeMb / 1024).toFixed(1);
+          usedGb = +(usedMb / 1024).toFixed(1);
+          usagePercent = totalMb > 0 ? Math.round((usedMb / totalMb) * 100) : 0;
+        }
+      } catch (err) {}
+    }
+
+    try {
+      fs.accessSync(normPath, fs.constants.W_OK);
+      isWritable = true;
+    } catch {
+      isWritable = false;
+    }
+  }
+
+  return {
+    path: normPath,
+    totalGb,
+    freeGb,
+    usedGb,
+    usagePercent,
+    isWritable,
+    exists,
+    storageType,
+    storageTypeLabel
+  };
+}
+
 const DEFAULT_DRIVE_CONFIG: DriveStorageConfig = {
   activeStoragePath: DEFAULT_STORAGE_DIR,
-  driveLabel: "هارد ذخیره‌سازی کلینیک",
+  driveLabel: "هارد ذخیره‌سازی کلینیک (رزبری‌پای)",
   autoScanIntervalSeconds: 5,
   autoOrganizeByDate: true,
   autoIndexPatients: true,
-  diskSpaceAlertThresholdGb: 10
+  diskSpaceAlertThresholdGb: 10,
+  maxDiskUsagePercent: MAX_DISK_USAGE_PERCENT,
+  tempPath: ENV_TEMP_PATH
 };
 
 let dbData: {
@@ -151,24 +232,40 @@ function getRealSystemTelemetry(): PiSystemTelemetry {
   } catch (e) {}
 
   const activePath = dbData.driveConfig.activeStoragePath || DEFAULT_STORAGE_DIR;
-  const driveExists = fs.existsSync(activePath);
+  const activeStats = getStorageSpaceStats(activePath);
+
+  // Internal storage partition stats (e.g., MicroSD / app directory)
+  const internalStats = getStorageSpaceStats(process.cwd());
+
+  // External HDD partition stats
+  const externalPath = activeStats.storageType === 'external_hdd' ? activePath : '/mnt/external_hdd/medical_photos';
+  const externalStats = getStorageSpaceStats(externalPath);
+
+  const isDiskHigh = activeStats.usagePercent >= MAX_DISK_USAGE_PERCENT;
 
   return {
     cpuTemperatureC: cpuTemp,
     cpuUsagePercent: totalMemMb > 0 ? Math.round((usedMemMb / totalMemMb) * 100) : 0,
     ramUsageMb: usedMemMb,
     ramTotalMb: totalMemMb,
-    diskUsedGb: 0,
-    diskTotalGb: 0,
+    diskUsedGb: activeStats.usedGb,
+    diskTotalGb: activeStats.totalGb,
+    diskFreeGb: activeStats.freeGb,
+    diskUsagePercent: activeStats.usagePercent,
     activeDriveName: dbData.driveConfig.driveLabel,
     activeDrivePath: activePath,
-    driveStatus: driveExists ? "connected" : "disconnected",
-    cameraConnected: driveExists,
-    cameraName: driveExists ? "درایو ذخیره‌سازی متصل است" : "درایو متصل نیست",
+    driveStatus: activeStats.exists ? (isDiskHigh ? "warning" : "connected") : "disconnected",
+    cameraConnected: activeStats.exists,
+    cameraName: activeStats.exists ? `درایو فعال (${activeStats.storageTypeLabel})` : "درایو متصل نیست",
     cameraBattery: 100,
     localIp,
     uptimeSeconds: uptimeSec,
-    lastPhotoReceivedTime: dbData.telemetry.lastPhotoReceivedTime || ""
+    lastPhotoReceivedTime: dbData.telemetry.lastPhotoReceivedTime || "",
+    storageType: activeStats.storageType,
+    storageTypeLabel: activeStats.storageTypeLabel,
+    internalStorage: internalStats,
+    externalStorage: externalStats,
+    isDiskUsageHigh: isDiskHigh
   };
 }
 
@@ -229,6 +326,7 @@ function resolveDirectoryItems(currentPath: string): DirectoryListing {
   const totalFiles = items.filter(i => i.type === "file").length;
   const totalFolders = items.filter(i => i.type === "directory").length;
   const totalSizeBytes = items.reduce((acc, i) => acc + (i.sizeBytes || 0), 0);
+  const pathStats = getStorageSpaceStats(normalized);
 
   return {
     currentPath: normalized,
@@ -237,8 +335,8 @@ function resolveDirectoryItems(currentPath: string): DirectoryListing {
     totalFiles,
     totalFolders,
     totalSizeBytes,
-    isWritable: fs.existsSync(normalized),
-    freeSpaceGb: 0
+    isWritable: pathStats.isWritable,
+    freeSpaceGb: pathStats.freeGb
   };
 }
 

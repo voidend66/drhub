@@ -56,9 +56,10 @@ export const DriveSettingsModal: React.FC<DriveSettingsModalProps> = ({
   if (!isOpen) return null;
 
   const HDD_PRESETS = [
-    { label: 'هارد اکسترنال اصلی (USB 3.0)', path: '/media/pi/hdd_medical', desc: 'مسیر پیش‌فرض مانت هارد اکسترنال در رزبری‌پای' },
-    { label: 'حافظه داخلی رزبری‌پای', path: '/home/pi/medical_storage/raw_uploads', desc: 'مسیر محلی در دیسک داخلی سیستم‌عامل' },
-    { label: 'پوشه شبکه کلینیک (Samba/NFS)', path: '/mnt/clinic_nas/photos', desc: 'درایو به اشتراک گذاشته شده در شبکه داخلی' },
+    { label: 'هارد اکسترنال (fstab / USB 3.0)', path: '/mnt/external_hdd/medical_photos', desc: 'مسیر استاندارد مانت دائم هارد اکسترنال با fstab' },
+    { label: 'هارد اکسترنال دسکتاپ (Raspberry Pi OS)', path: '/media/pi/hdd_medical', desc: 'مسیر پیش‌فرض خودکار در رزبری‌پای دسکتاپ' },
+    { label: 'حافظه داخلی رزبری‌پای (MicroSD/SSD)', path: '/var/app_data/medical_storage', desc: 'مسیر محلی در کارت حافظه/حافظه داخلی سیستم‌عامل' },
+    { label: 'حافظه داخلی (پوشه پروژه)', path: './medical_storage', desc: 'پوشه محلی درون شاخه اجرای پروژه' },
   ];
 
   const handleSave = async (e: React.FormEvent) => {
@@ -335,7 +336,7 @@ export const DriveSettingsModal: React.FC<DriveSettingsModalProps> = ({
                       style={{ width: `${Math.min(100, (telemetry.cpuTemperatureC / 85) * 100)}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-slate-500">محدوده ایمن کاری رزبری‌پای 4B: زیر ۶۵ درجه</p>
+                  <p className="text-[10px] text-slate-500">محدوده ایمن کاری رزبری‌پای: زیر ۶۵ درجه</p>
                 </div>
 
                 {/* RAM Usage */}
@@ -358,52 +359,121 @@ export const DriveSettingsModal: React.FC<DriveSettingsModalProps> = ({
                   <p className="text-[10px] text-slate-500">مصرف لایه پردازش و حافظه موقت</p>
                 </div>
 
-                {/* Disk Space */}
+                {/* Active Storage Partition */}
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                   <div className="flex items-center justify-between text-slate-600 text-xs font-semibold">
                     <span className="flex items-center gap-1.5">
                       <HardDrive className="w-4 h-4 text-emerald-600" />
-                      فضای هارد دیسک
+                      درایو فعال ذخیره‌سازی
                     </span>
                   </div>
                   <div className="text-2xl font-black font-mono text-emerald-600">
-                    {(telemetry.diskTotalGb - telemetry.diskUsedGb).toFixed(1)}{' '}
+                    {telemetry.diskFreeGb ?? (telemetry.diskTotalGb - telemetry.diskUsedGb).toFixed(1)}{' '}
                     <span className="text-xs font-normal text-slate-500">GB آزاد</span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500"
-                      style={{ width: `${(telemetry.diskUsedGb / telemetry.diskTotalGb) * 100}%` }}
+                      className={`h-full ${
+                        (telemetry.diskUsagePercent || 0) >= 90 ? 'bg-rose-500' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${telemetry.diskUsagePercent || (telemetry.diskTotalGb > 0 ? (telemetry.diskUsedGb / telemetry.diskTotalGb) * 100 : 0)}%` }}
                     />
                   </div>
                   <p className="text-[10px] text-slate-500">
-                    کل فضا: {telemetry.diskTotalGb} GB (مصرف‌شده: {telemetry.diskUsedGb} GB)
+                    کل: {telemetry.diskTotalGb} GB (مصرف: {telemetry.diskUsedGb} GB - {telemetry.diskUsagePercent || 0}%)
                   </p>
                 </div>
               </div>
 
+              {/* Storage Partitions Detailed Breakdown */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Internal Storage Card */}
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between font-bold text-slate-800">
+                    <span className="flex items-center gap-2">
+                      <HardDrive className="w-4 h-4 text-slate-600" />
+                      حافظه داخلی رزبری‌پای (MicroSD/SSD)
+                    </span>
+                    <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-full">
+                      Internal OS
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-mono dir-ltr text-right truncate">
+                    {telemetry.internalStorage?.path || process.cwd()}
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-semibold pt-1">
+                    <span className="text-slate-600">فضای کل / آزاد:</span>
+                    <span className="font-mono text-slate-900">
+                      {telemetry.internalStorage?.freeGb || 0} GB آزاد از {telemetry.internalStorage?.totalGb || 0} GB
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="h-full bg-slate-700 transition-all"
+                      style={{ width: `${telemetry.internalStorage?.usagePercent || 0}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500">
+                    <span>درصد مصرف: {telemetry.internalStorage?.usagePercent || 0}%</span>
+                    <span>وضعیت: {telemetry.internalStorage?.isWritable ? 'قابل نوشتن (OK)' : 'فقط خواندنی'}</span>
+                  </div>
+                </div>
+
+                {/* External HDD Card */}
+                <div className="p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between font-bold text-slate-800">
+                    <span className="flex items-center gap-2">
+                      <HardDrive className="w-4 h-4 text-emerald-600" />
+                      هارد اکسترنال (USB HDD/SSD)
+                    </span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                      External Drive
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-600 font-mono dir-ltr text-right truncate">
+                    {telemetry.externalStorage?.path || '/mnt/external_hdd/medical_photos'}
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-semibold pt-1">
+                    <span className="text-slate-600">فضای کل / آزاد:</span>
+                    <span className="font-mono text-emerald-800 font-bold">
+                      {telemetry.externalStorage?.freeGb || 0} GB آزاد از {telemetry.externalStorage?.totalGb || 0} GB
+                    </span>
+                  </div>
+                  <div className="w-full bg-emerald-200/80 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 transition-all"
+                      style={{ width: `${telemetry.externalStorage?.usagePercent || 0}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-600">
+                    <span>درصد مصرف: {telemetry.externalStorage?.usagePercent || 0}%</span>
+                    <span>وضعیت: {telemetry.externalStorage?.exists ? 'متصل و آماده' : 'عدم شناسایی درایو'}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Hardware Summary Card */}
-              <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-2 text-xs">
-                <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-600" />
+              <div className="p-4 bg-slate-900 text-white rounded-2xl space-y-2 text-xs">
+                <h4 className="font-bold text-white flex items-center gap-2">
+                  <Database className="w-4 h-4 text-emerald-400" />
                   مشخصات اتصال هارد درایو و رزبری‌پای
                 </h4>
-                <div className="grid grid-cols-2 gap-2 text-slate-600">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
                   <div>
-                    عنوان درایو فعال: <span className="text-slate-900 font-bold">{telemetry.activeDriveName}</span>
+                    عنوان درایو فعال: <span className="text-emerald-300 font-bold">{telemetry.activeDriveName}</span>
                   </div>
                   <div>
-                    آدرس آی‌پی رزبری‌پای: <span className="text-emerald-700 font-mono font-bold dir-ltr inline-block">{telemetry.localIp}</span>
+                    آدرس آی‌پی رزبری‌پای: <span className="text-emerald-400 font-mono font-bold dir-ltr inline-block">{telemetry.localIp}</span>
                   </div>
                   <div>
                     زمان فعالیت پیوسته (Uptime):{' '}
-                    <span className="text-slate-900 font-mono font-semibold">
+                    <span className="text-slate-200 font-mono font-semibold">
                       {Math.floor(telemetry.uptimeSeconds / 3600)} ساعت و {Math.floor((telemetry.uptimeSeconds % 3600) / 60)} دقیقه
                     </span>
                   </div>
                   <div>
-                    وضعیت هارد دیسک:{' '}
-                    <span className="text-emerald-600 font-bold">متصل و آماده خواندن/نوشتن</span>
+                    نوع ذخیره‌سازی فعال:{' '}
+                    <span className="text-emerald-400 font-bold">{telemetry.storageTypeLabel || 'هارد درایو محلی'}</span>
                   </div>
                 </div>
               </div>
