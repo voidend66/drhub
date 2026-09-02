@@ -41,6 +41,7 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
   onSelectPhotoLightbox,
   allPhotos,
   patients,
+  onPhotosUploaded,
 }) => {
   const [currentPath, setCurrentPath] = useState<string>(currentActiveStoragePath || '/media/pi/hdd_medical');
   const [listing, setListing] = useState<DirectoryListing | null>(null);
@@ -137,14 +138,53 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
   const handleSetAsActiveStorage = async (targetPath: string) => {
     onSetActiveStoragePath(targetPath);
     try {
-      await fetch('/api/fs/set-active-path', {
+      const res = await fetch('/api/fs/set-active-path', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selectedPath: targetPath }),
       });
+      if (res.ok) {
+        const data = await res.json();
+        setSuccessMessage(`پوشه فعال با موفقیت به "${targetPath}" تغییر یافت و شات‌ها پایش می‌شوند.`);
+        setTimeout(() => setSuccessMessage(null), 3500);
+        // Refresh photos in App
+        const fresh = await fetch('/api/photos').then(r => r.json());
+        if (Array.isArray(fresh) && onPhotosUploaded) {
+          onPhotosUploaded(fresh);
+        }
+      }
       loadDirectory(currentPath);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  // Import all photos of the current folder into Inbox
+  const [isImporting, setIsImporting] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleImportFolderToInbox = async () => {
+    setIsImporting(true);
+    try {
+      const res = await fetch('/api/fs/import-folder-to-inbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: currentPath }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSuccessMessage(`تعداد ${data.newIndexed} عکس جدید با موفقیت به صندوق ورودی اضافه شد.`);
+        setTimeout(() => setSuccessMessage(null), 4000);
+        loadDirectory(currentPath);
+        const fresh = await fetch('/api/photos').then(r => r.json());
+        if (Array.isArray(fresh) && onPhotosUploaded) {
+          onPhotosUploaded(fresh);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -158,18 +198,18 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
   // Quick shortcuts in left sidebar
   const QUICK_SHORTCUTS = [
     {
-      title: 'هارد اکسترنال کلینیک (fstab)',
-      path: '/mnt/external_hdd/medical_photos',
-      icon: <HardDrive className="w-4 h-4 text-emerald-600" />,
-      badge: 'HDD',
+      title: 'پوشه دوربین و عکس‌ها (100MSDCF)',
+      path: '/media/mahdi/mm/doctor/f/A/DCIM/100MSDCF',
+      icon: <Camera className="w-4 h-4 text-emerald-600" />,
+      badge: 'دوربین Sony',
       badgeColor: 'bg-emerald-100 text-emerald-800',
     },
     {
-      title: 'هارد اکسترنال دسکتاپ (Raspberry Pi OS)',
-      path: '/media/pi/hdd_medical',
+      title: 'مسیر دیتابیس و مطب دکتر',
+      path: '/media/mahdi/mm/doctor',
       icon: <HardDrive className="w-4 h-4 text-emerald-600" />,
-      badge: 'Desktop',
-      badgeColor: 'bg-emerald-100 text-emerald-800',
+      badge: 'پوشه مطب',
+      badgeColor: 'bg-blue-100 text-blue-800',
     },
     {
       title: 'مسیر فعال پردازش شاتر',
@@ -179,10 +219,10 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
       badgeColor: 'bg-emerald-100 text-emerald-800',
     },
     {
-      title: 'حافظه داخلی رزبری‌پای (MicroSD/SSD)',
-      path: '/var/app_data/medical_storage',
+      title: 'هارد اکسترنال کلینیک (fstab)',
+      path: '/mnt/external_hdd/medical_photos',
       icon: <HardDrive className="w-4 h-4 text-slate-600" />,
-      badge: 'Internal',
+      badge: 'HDD',
       badgeColor: 'bg-slate-200 text-slate-700',
     },
     {
@@ -349,7 +389,7 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                 <div className="overflow-x-auto max-w-md">{renderBreadcrumbs()}</div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                 <button
                   onClick={handleCopyCurrentPath}
                   className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium flex items-center gap-1 transition"
@@ -359,8 +399,31 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                 </button>
 
                 <button
+                  onClick={() => handleSetAsActiveStorage(currentPath)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition ${
+                    currentActiveStoragePath === currentPath
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
+                  }`}
+                  title="انتخاب این پوشه برای پایش خودکار عکس‌های دوربین و هارد"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{currentActiveStoragePath === currentPath ? 'پوشه فعال هارد' : 'انتخاب به عنوان پوشه هارد'}</span>
+                </button>
+
+                <button
+                  onClick={handleImportFolderToInbox}
+                  disabled={isImporting}
+                  className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 transition shadow-xs disabled:opacity-50"
+                  title="خواندن و ثبت تمام عکس‌های موجود در این پوشه به عنوان شات جدید در صندوق ورودی"
+                >
+                  <FolderSync className={`w-3.5 h-3.5 ${isImporting ? 'animate-spin' : ''}`} />
+                  <span>{isImporting ? 'در حال ورود...' : 'افزودن عکس‌ها به صندوق ورودی'}</span>
+                </button>
+
+                <button
                   onClick={() => setIsCreatingFolder(!isCreatingFolder)}
-                  className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1 transition"
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition"
                 >
                   <FolderPlus className="w-3.5 h-3.5" />
                   <span>پوشه جدید</span>
@@ -382,6 +445,14 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Success alert message */}
+            {successMessage && (
+              <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{successMessage}</span>
+              </div>
+            )}
 
             {/* Create Folder Bar */}
             {isCreatingFolder && (
@@ -453,6 +524,31 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                   (p) => p.fileName === item.name || p.filePath === item.path
                 );
 
+                const photoForViewer: MedicalPhoto = matchingPhoto || {
+                  id: `file-${item.path}`,
+                  patientId: null,
+                  fileName: item.name,
+                  filePath: item.path,
+                  thumbnailUrl: item.thumbnailUrl || `/api/fs/raw?path=${encodeURIComponent(item.path)}`,
+                  highResUrl: item.thumbnailUrl || `/api/fs/raw?path=${encodeURIComponent(item.path)}`,
+                  uploadTimestamp: new Date().toISOString(),
+                  sourceCamera: {
+                    name: 'هارد درایو اکسترنال کلینیک',
+                    location: currentPath,
+                    ipAddress: '127.0.0.1',
+                    ftpPort: 0,
+                    wifiSignalDbm: 100,
+                  },
+                  angle: 'unassigned',
+                  stage: 'unassigned',
+                  exif: {
+                    cameraModel: 'Sony Medical Alpha',
+                    lensModel: 'Medical Macro Lens',
+                    fileSize: item.sizeFormatted,
+                  },
+                  clinicalNotes: {},
+                };
+
                 return (
                   <div
                     key={idx}
@@ -464,17 +560,24 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                         onClick={() => {
                           if (isFolder) {
                             handleOpenDirectory(item.path);
-                          } else if (matchingPhoto && onSelectPhotoLightbox) {
-                            onSelectPhotoLightbox(matchingPhoto);
+                          } else if (item.isImage && onSelectPhotoLightbox) {
+                            onSelectPhotoLightbox(photoForViewer);
                           }
                         }}
                         className="w-full h-28 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden cursor-pointer mb-2.5 relative group-hover:scale-[1.02] transition-transform"
                       >
-                        {item.isImage && (matchingPhoto?.thumbnailUrl || item.thumbnailUrl) ? (
+                        {item.isImage ? (
                           <img
-                            src={matchingPhoto?.thumbnailUrl || item.thumbnailUrl}
+                            src={matchingPhoto?.thumbnailUrl || item.thumbnailUrl || `/api/fs/raw?path=${encodeURIComponent(item.path)}`}
                             alt={item.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              const fallback = `/api/fs/raw?path=${encodeURIComponent(item.path)}`;
+                              if (target.src !== fallback) {
+                                target.src = fallback;
+                              }
+                            }}
                           />
                         ) : isFolder ? (
                           <Folder className="w-12 h-12 text-amber-500 fill-amber-100" />
@@ -487,12 +590,24 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                             {item.itemsCount} فایل
                           </span>
                         )}
+
+                        {item.isImage && (
+                          <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <span className="bg-white/90 text-slate-800 text-[11px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                              <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>مشاهده عکس</span>
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Name & Details */}
                       <div className="space-y-0.5">
                         <div
-                          onClick={() => isFolder && handleOpenDirectory(item.path)}
+                          onClick={() => {
+                            if (isFolder) handleOpenDirectory(item.path);
+                            else if (item.isImage && onSelectPhotoLightbox) onSelectPhotoLightbox(photoForViewer);
+                          }}
                           className="font-bold text-xs text-slate-800 truncate cursor-pointer hover:text-emerald-700"
                           title={item.name}
                         >
@@ -507,17 +622,29 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
 
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100">
-                      <button
-                        onClick={() => handleDeleteItem(item)}
-                        className="text-slate-400 hover:text-rose-600 transition p-1"
-                        title="حذف"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-
-                      {matchingPhoto && onOpenTagModal && (
+                      <div className="flex items-center gap-1">
                         <button
-                          onClick={() => onOpenTagModal(matchingPhoto)}
+                          onClick={() => handleDeleteItem(item)}
+                          className="text-slate-400 hover:text-rose-600 transition p-1 rounded-lg hover:bg-rose-50"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {item.isImage && onSelectPhotoLightbox && (
+                          <button
+                            onClick={() => onSelectPhotoLightbox(photoForViewer)}
+                            className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-emerald-600 transition"
+                            title="مشاهده بزرگ تصویر"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {item.isImage && onOpenTagModal && (
+                        <button
+                          onClick={() => onOpenTagModal(photoForViewer)}
                           className="px-2 py-0.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold rounded-lg flex items-center gap-1 transition"
                         >
                           <Tag className="w-3 h-3" />
@@ -548,6 +675,31 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                       (p) => p.fileName === item.name || p.filePath === item.path
                     );
 
+                    const photoForViewer: MedicalPhoto = matchingPhoto || {
+                      id: `file-${item.path}`,
+                      patientId: null,
+                      fileName: item.name,
+                      filePath: item.path,
+                      thumbnailUrl: item.thumbnailUrl || `/api/fs/raw?path=${encodeURIComponent(item.path)}`,
+                      highResUrl: item.thumbnailUrl || `/api/fs/raw?path=${encodeURIComponent(item.path)}`,
+                      uploadTimestamp: new Date().toISOString(),
+                      sourceCamera: {
+                        name: 'هارد درایو اکسترنال کلینیک',
+                        location: currentPath,
+                        ipAddress: '127.0.0.1',
+                        ftpPort: 0,
+                        wifiSignalDbm: 100,
+                      },
+                      angle: 'unassigned',
+                      stage: 'unassigned',
+                      exif: {
+                        cameraModel: 'Sony Medical Alpha',
+                        lensModel: 'Medical Macro Lens',
+                        fileSize: item.sizeFormatted,
+                      },
+                      clinicalNotes: {},
+                    };
+
                     return (
                       <tr key={idx} className="hover:bg-slate-50/80 transition">
                         <td className="p-3 flex items-center gap-2">
@@ -557,7 +709,10 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                             <FileImage className="w-4 h-4 text-slate-400" />
                           )}
                           <span
-                            onClick={() => isFolder && handleOpenDirectory(item.path)}
+                            onClick={() => {
+                              if (isFolder) handleOpenDirectory(item.path);
+                              else if (item.isImage && onSelectPhotoLightbox) onSelectPhotoLightbox(photoForViewer);
+                            }}
                             className="font-bold text-slate-800 hover:text-emerald-700 cursor-pointer"
                           >
                             {item.name}
@@ -567,9 +722,19 @@ export const FileManagerView: React.FC<FileManagerViewProps> = ({
                         <td className="p-3 font-mono text-slate-500">{item.sizeFormatted || '—'}</td>
                         <td className="p-3 text-slate-500">{item.modifiedAt || 'امروز'}</td>
                         <td className="p-3 text-left space-x-1 space-x-reverse">
+                          {item.isImage && onSelectPhotoLightbox && (
+                            <button
+                              onClick={() => onSelectPhotoLightbox(photoForViewer)}
+                              className="p-1.5 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 rounded-lg transition"
+                              title="مشاهده تصویر"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDeleteItem(item)}
                             className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition"
+                            title="حذف"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

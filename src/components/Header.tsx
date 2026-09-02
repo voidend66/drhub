@@ -8,7 +8,8 @@ import {
   VolumeX, 
   Settings,
   FolderTree,
-  Terminal
+  Terminal,
+  Database
 } from 'lucide-react';
 import { PiSystemTelemetry } from '../types';
 
@@ -59,6 +60,20 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 <span>{telemetry ? `${telemetry.cpuTemperatureC}°C | HDD` : 'هارد رزبری‌پای'}</span>
+              </button>
+
+              {/* SQLite DB Status Badge */}
+              <button
+                onClick={onOpenDriveSettings}
+                title={`پایگاه داده SQLite بیماران: ${telemetry?.sqliteStatus?.actualPath || '/media/mahdi/mm/doctor/patients.db'}`}
+                className={`hidden sm:flex px-2.5 py-1 text-[11px] rounded-full border font-bold items-center gap-1.5 self-center transition ${
+                  telemetry?.sqliteStatus?.isConnected
+                    ? (telemetry.sqliteStatus.isFallback ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200')
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                }`}
+              >
+                <Database className="w-3 h-3 text-emerald-600" />
+                <span>SQLite: {telemetry?.sqliteStatus?.isConnected ? `${telemetry.sqliteStatus.patientsCount} بیمار` : 'پایگاه داده'}</span>
               </button>
             </div>
           </div>

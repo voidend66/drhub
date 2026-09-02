@@ -99,6 +99,23 @@ export interface StoragePartitionInfo {
   storageTypeLabel: string;
 }
 
+export interface SqliteStatus {
+  enabled: boolean;
+  configuredPath: string;
+  actualPath: string;
+  directoryPath: string;
+  isConnected: boolean;
+  isFallback: boolean;
+  fileSizeBytes: number;
+  fileSizeFormatted: string;
+  patientsCount: number;
+  photosCount: number;
+  isWritable: boolean;
+  directoryExists: boolean;
+  statusMessage: string;
+  lastUpdated: string;
+}
+
 export interface PiSystemTelemetry {
   cpuTemperatureC: number;
   cpuUsagePercent: number;
@@ -122,6 +139,7 @@ export interface PiSystemTelemetry {
   internalStorage?: StoragePartitionInfo;
   externalStorage?: StoragePartitionInfo;
   isDiskUsageHigh?: boolean;
+  sqliteStatus?: SqliteStatus;
 }
 
 export interface DriveStorageConfig {
@@ -133,6 +151,8 @@ export interface DriveStorageConfig {
   diskSpaceAlertThresholdGb: number;
   maxDiskUsagePercent?: number;
   tempPath?: string;
+  sqliteDbPath?: string;
+  sqliteAutoSync?: boolean;
 }
 
 export type LogLevel = 'INFO' | 'SUCCESS' | 'WARN' | 'ERROR' | 'DRIVE';
