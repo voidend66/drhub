@@ -10,9 +10,7 @@ import {
   HardDrive,
   Radio,
   FileImage,
-  RefreshCw,
-  Eye,
-  FolderOpen
+  RefreshCw
 } from 'lucide-react';
 import { MedicalPhoto } from '../types';
 
@@ -23,8 +21,6 @@ interface InboxViewProps {
   onSelectPhotoLightbox: (photo: MedicalPhoto) => void;
   onPhotosUploaded?: (newPhotos: MedicalPhoto[]) => void;
   activeStoragePath?: string;
-  onTriggerRescan?: () => Promise<void> | void;
-  onNavigateToExplorer?: () => void;
 }
 
 export const InboxView: React.FC<InboxViewProps> = ({
@@ -34,22 +30,10 @@ export const InboxView: React.FC<InboxViewProps> = ({
   onSelectPhotoLightbox,
   onPhotosUploaded,
   activeStoragePath = '/media/pi/hdd_medical',
-  onTriggerRescan,
-  onNavigateToExplorer,
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isRescanning, setIsRescanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleRescan = async () => {
-    setIsRescanning(true);
-    try {
-      if (onTriggerRescan) await onTriggerRescan();
-    } finally {
-      setIsRescanning(false);
-    }
-  };
 
   const processFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
@@ -159,30 +143,7 @@ export const InboxView: React.FC<InboxViewProps> = ({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-          {onTriggerRescan && (
-            <button
-              onClick={handleRescan}
-              disabled={isRescanning}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all shadow-xs disabled:opacity-50"
-              title="اسکن پوشه هارد دیسک برای عکس‌های جدید"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRescanning ? 'animate-spin text-emerald-600' : ''}`} />
-              <span>{isRescanning ? 'در حال اسکن...' : 'اسکن مجدد هارد'}</span>
-            </button>
-          )}
-
-          {onNavigateToExplorer && (
-            <button
-              onClick={onNavigateToExplorer}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all shadow-xs"
-              title="انتخاب یا تغییر پوشه هارد در مدیریت فایل"
-            >
-              <FolderOpen className="w-3.5 h-3.5 text-slate-500" />
-              <span>تغییر پوشه هارد</span>
-            </button>
-          )}
-
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
@@ -223,43 +184,22 @@ export const InboxView: React.FC<InboxViewProps> = ({
           <div>
             <h3 className="font-bold text-slate-800 text-base">صندوق ورودی آماده دریافت عکس</h3>
             <p className="text-xs text-slate-500 mt-1 max-w-md">
-              عکس‌های موجود در پوشه هارد دیسک به صورت خودکار شناسایی شده و اینجا نمایش داده می‌شوند. همچنین می‌توانید پوشه هارد را از تب «مدیریت فایل و هارد» تغییر دهید.
+              کلیه عکس‌های نمایشی پاک شدند. با زدن شاتر دوربین متصل به وای‌فای (FTP) یا کشیدن و رها کردن عکس‌های دوربین (Drag & Drop)، فایل‌ها در این بخش دریافت و فهرست می‌شوند.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-2 flex-wrap justify-center">
-            {onNavigateToExplorer && (
-              <button
-                onClick={onNavigateToExplorer}
-                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all"
-              >
-                <FolderOpen className="w-4 h-4" />
-                <span>انتخاب پوشه هارد در مدیریت فایل</span>
-              </button>
-            )}
-
-            {onTriggerRescan && (
-              <button
-                onClick={handleRescan}
-                disabled={isRescanning}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRescanning ? 'animate-spin' : ''}`} />
-                <span>اسکن مجدد پوشه هارد</span>
-              </button>
-            )}
-
+          <div className="flex items-center gap-2 pt-2">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all"
             >
               <FileImage className="w-4 h-4" />
-              <span>بارگذاری دستی عکس</span>
+              <span>بارگذاری عکس از رم ریدر / سیستم</span>
             </button>
           </div>
 
           <span className="text-[11px] text-slate-400 font-mono">
-            مسیر در حال پایش: {activeStoragePath}
+            سیستم پایش زنده هارد درایو رزبری‌پای آماده دریافت و ساخت پوشه‌های خودکار است.
           </span>
         </div>
       ) : (
@@ -271,22 +211,13 @@ export const InboxView: React.FC<InboxViewProps> = ({
               className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md hover:border-emerald-300 transition-all flex flex-col group animate-in fade-in duration-200"
             >
               {/* Photo Image Card */}
-              <div 
-                onClick={() => onSelectPhotoLightbox(photo)}
-                className="relative aspect-[4/3] bg-slate-100 overflow-hidden cursor-pointer"
-              >
+              <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden cursor-pointer">
                 <img
-                  src={photo.thumbnailUrl || `/api/fs/raw?path=${encodeURIComponent(photo.filePath || photo.fileName)}`}
+                  src={photo.thumbnailUrl}
                   alt={photo.fileName}
+                  onClick={() => onSelectPhotoLightbox(photo)}
                   className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
                   referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    const fallback = `/api/fs/raw?path=${encodeURIComponent(photo.filePath || photo.fileName)}`;
-                    if (target.src !== fallback) {
-                      target.src = fallback;
-                    }
-                  }}
                 />
 
                 {/* Camera Name Badge */}
@@ -297,10 +228,7 @@ export const InboxView: React.FC<InboxViewProps> = ({
 
                 {/* Fullscreen icon */}
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectPhotoLightbox(photo);
-                  }}
+                  onClick={() => onSelectPhotoLightbox(photo)}
                   className="absolute bottom-2.5 left-2.5 p-1.5 rounded-lg bg-white/95 text-slate-700 hover:text-emerald-600 shadow-xs transition-all opacity-0 group-hover:opacity-100"
                   title="مشاهده تمام صفحه و ابزارها"
                 >
@@ -327,14 +255,6 @@ export const InboxView: React.FC<InboxViewProps> = ({
                   >
                     <Tag className="w-3.5 h-3.5" />
                     <span>الصاق به پرونده</span>
-                  </button>
-
-                  <button
-                    onClick={() => onSelectPhotoLightbox(photo)}
-                    className="p-2 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 transition"
-                    title="مشاهده تصویر"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
                   </button>
 
                   <button

@@ -89,66 +89,6 @@ export default function App() {
     loadServerData();
   }, [loadServerData]);
 
-  // Real-time SSE listener for new photos appearing in the hard drive folder
-  useEffect(() => {
-    let es: EventSource | null = null;
-    try {
-      es = new EventSource('/api/logs/stream');
-
-      es.addEventListener('NEW_PHOTOS', (event: MessageEvent) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload && Array.isArray(payload.photos) && payload.photos.length > 0) {
-            setPhotos((prev) => {
-              const existingIds = new Set(prev.map((p) => p.id));
-              const freshPhotos = payload.photos.filter((p: MedicalPhoto) => !existingIds.has(p.id));
-              if (freshPhotos.length > 0) {
-                if (soundEnabled) medicalAudio.playNewPhotoChime();
-                setLiveAlertPhoto(freshPhotos[0]);
-                return [...freshPhotos, ...prev];
-              }
-              return prev;
-            });
-          }
-        } catch (e) {
-          console.error('Error parsing NEW_PHOTOS SSE:', e);
-        }
-      });
-
-      es.addEventListener('TELEMETRY_UPDATE', (event: MessageEvent) => {
-        try {
-          const telem = JSON.parse(event.data);
-          if (telem) setTelemetry(telem);
-        } catch (e) {}
-      });
-    } catch (err) {
-      console.warn('SSE EventSource setup error:', err);
-    }
-
-    return () => {
-      es?.close();
-    };
-  }, [soundEnabled]);
-
-  // Auto-refresh photos when viewing Inbox to ensure fresh sync
-  useEffect(() => {
-    if (activeTab !== 'inbox') return;
-    const interval = setInterval(async () => {
-      try {
-        const fresh = await fetch('/api/photos').then((r) => (r.ok ? r.json() : null));
-        if (Array.isArray(fresh)) {
-          setPhotos((prev) => {
-            if (fresh.length !== prev.length || fresh[0]?.id !== prev[0]?.id) {
-              return fresh;
-            }
-            return prev;
-          });
-        }
-      } catch (e) {}
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [activeTab]);
-
   // Periodic telemetry refresh every 10 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -377,8 +317,6 @@ export default function App() {
             onSelectPhotoLightbox={(photo) => setLightboxPhoto(photo)}
             onPhotosUploaded={handlePhotosUploaded}
             activeStoragePath={driveConfig.activeStoragePath}
-            onTriggerRescan={handleTriggerRescan}
-            onNavigateToExplorer={() => setActiveTab('explorer')}
           />
         )}
 

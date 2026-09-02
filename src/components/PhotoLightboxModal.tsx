@@ -512,20 +512,13 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
               }}
             >
               <img
-                src={photo.highResUrl || photo.thumbnailUrl || `/api/fs/raw?path=${encodeURIComponent(photo.filePath || photo.fileName)}`}
+                src={photo.highResUrl}
                 alt={photo.fileName}
                 className={`max-w-full max-h-full rounded-md shadow-2xl transition-all duration-200 ${
                   fitMode === 'cover' ? 'w-full h-full object-cover' : 'object-contain'
                 }`}
                 referrerPolicy="no-referrer"
                 draggable={false}
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  const fallback = `/api/fs/raw?path=${encodeURIComponent(photo.filePath || photo.fileName)}`;
-                  if (target.src !== fallback) {
-                    target.src = fallback;
-                  }
-                }}
               />
             </div>
 

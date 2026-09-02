@@ -185,12 +185,6 @@ if (sqlitePatients.length > 0) {
   dbData.patients = sqlitePatients;
 }
 
-// If local dbData has no photos, load from SQLite
-const sqlitePhotos = getAllPhotosFromSqlite();
-if (sqlitePhotos.length > 0 && dbData.photos.length === 0) {
-  dbData.photos = sqlitePhotos;
-}
-
 function saveDb() {
   try {
     fs.writeFileSync(DB_FILE_PATH, JSON.stringify(dbData, null, 2));
@@ -204,17 +198,6 @@ const sseClients: Response[] = [];
 
 function broadcastLogToClients(log: SystemLogEntry) {
   const dataString = `data: ${JSON.stringify(log)}\n\n`;
-  for (let i = sseClients.length - 1; i >= 0; i--) {
-    try {
-      sseClients[i].write(dataString);
-    } catch {
-      sseClients.splice(i, 1);
-    }
-  }
-}
-
-function broadcastEventToClients(event: { type: string; [key: string]: any }) {
-  const dataString = `data: ${JSON.stringify(event)}\n\n`;
   for (let i = sseClients.length - 1; i >= 0; i--) {
     try {
       sseClients[i].write(dataString);
@@ -356,13 +339,11 @@ function resolveDirectoryItems(currentPath: string): DirectoryListing {
             } else if (entry.isFile()) {
               const ext = path.extname(entry.name).toLowerCase().replace(".", "");
               const isImg = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "dcm"].includes(ext);
-              const rawUrl = isImg ? `/api/fs/raw?path=${encodeURIComponent(itemPath)}` : undefined;
               items.push({
                 name: entry.name,
                 path: itemPath,
                 type: "file",
                 isImage: isImg,
-                thumbnailUrl: rawUrl,
                 sizeFormatted: (entryStat.size / (1024 * 1024)).toFixed(2) + " MB",
                 sizeBytes: entryStat.size,
                 modifiedAt: new Date(entryStat.mtime).toLocaleDateString("fa-IR"),
@@ -394,158 +375,31 @@ function resolveDirectoryItems(currentPath: string): DirectoryListing {
   };
 }
 
-const SUPPORTED_IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp", "gif", "bmp"]);
-
-// Recursive Hard Drive Scanner for Camera & Medical Photos
-function scanDirectoryRecursivelyForPhotos(
-  dirPath: string,
-  maxDepth = 6,
-  currentDepth = 0
-): { indexedCount: number; totalPhotos: number; newlyAdded: MedicalPhoto[] } {
-  let indexedCount = 0;
-  let totalPhotos = 0;
-  const newlyAdded: MedicalPhoto[] = [];
-
-  if (currentDepth > maxDepth || !fs.existsSync(dirPath)) {
-    return { indexedCount, totalPhotos, newlyAdded };
-  }
-
-  try {
-    const stats = fs.statSync(dirPath);
-    if (!stats.isDirectory()) return { indexedCount, totalPhotos, newlyAdded };
-
-    const dirEntries = fs.readdirSync(dirPath, { withFileTypes: true });
-
-    for (const entry of dirEntries) {
-      const fullPath = path.join(dirPath, entry.name);
-
-      if (entry.isDirectory()) {
-        if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "dist") continue;
-        const sub = scanDirectoryRecursivelyForPhotos(fullPath, maxDepth, currentDepth + 1);
-        indexedCount += sub.indexedCount;
-        totalPhotos += sub.totalPhotos;
-        newlyAdded.push(...sub.newlyAdded);
-      } else if (entry.isFile()) {
-        const ext = path.extname(entry.name).toLowerCase().replace(".", "");
-        if (SUPPORTED_IMAGE_EXTS.has(ext)) {
-          totalPhotos++;
-
-          // Check if already in dbData.photos by path or name
-          const alreadyExists = dbData.photos.some(
-            (p) => p.filePath === fullPath || p.fileName === entry.name
-          );
-
-          if (!alreadyExists) {
-            try {
-              const fileStat = fs.statSync(fullPath);
-              const sizeMb = (fileStat.size / (1024 * 1024)).toFixed(2);
-              const sizeFormatted = fileStat.size > 1024 * 1024 ? `${sizeMb} MB` : `${Math.round(fileStat.size / 1024)} KB`;
-              const photoId = `photo-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-              const rawUrl = `/api/fs/raw?path=${encodeURIComponent(fullPath)}`;
-
-              const newPhoto: MedicalPhoto = {
-                id: photoId,
-                patientId: null, // Placed directly into Inbox (صندوق ورودی)!
-                fileName: entry.name,
-                filePath: fullPath,
-                thumbnailUrl: rawUrl,
-                highResUrl: rawUrl,
-                uploadTimestamp: fileStat.mtime.toISOString(),
-                sourceCamera: {
-                  name: "هارد اکسترنال کلینیک (USB/SD)",
-                  location: path.dirname(fullPath),
-                  ipAddress: "127.0.0.1",
-                  ftpPort: 0,
-                  wifiSignalDbm: 100,
-                },
-                angle: "unassigned",
-                stage: "unassigned",
-                exif: {
-                  cameraModel: "Sony / Canon Medical",
-                  lensModel: "Medical Macro Lens",
-                  iso: 100,
-                  aperture: "f/8.0",
-                  shutterSpeed: "1/160s",
-                  focalLength: "50mm",
-                  resolution: "High-Res 24MP",
-                  fileSize: sizeFormatted,
-                  colorSpace: "sRGB",
-                  flash: true,
-                },
-                clinicalNotes: {},
-              };
-
-              dbData.photos.unshift(newPhoto);
-              upsertPhotoToSqlite(newPhoto);
-              newlyAdded.push(newPhoto);
-              indexedCount++;
-
-              logSystemEvent(
-                "SUCCESS",
-                "HDD Scanner",
-                `عکس جدید از هارد در صندوق ورودی ثبت شد: ${entry.name}`,
-                `مسیر: ${fullPath}`,
-                entry.name,
-                sizeFormatted
-              );
-            } catch (fileErr) {
-              console.warn("Could not index file:", fullPath, fileErr);
-            }
-          }
-        }
-      }
-    }
-  } catch (err: any) {
-    console.warn("Scanner error at:", dirPath, err?.message);
-  }
-
-  return { indexedCount, totalPhotos, newlyAdded };
-}
-
 // Background Hard Drive Scanner
-function scanHardDriveForPhotos(targetPath?: string): DriveScanResult {
-  const drivePath = targetPath || dbData.driveConfig.activeStoragePath || DEFAULT_STORAGE_DIR;
+function scanHardDriveForPhotos(): DriveScanResult {
+  const drivePath = dbData.driveConfig.activeStoragePath || DEFAULT_STORAGE_DIR;
   const logs: string[] = [];
   logs.push(`پایش زنده هارد درایو در مسیر: ${drivePath}`);
 
   let newIndexed = 0;
-  let totalFound = 0;
+  let totalFound = dbData.photos.length;
 
   try {
     ensureStorageDirectories(drivePath);
-    logs.push("دسترسی به هارد دیسک بررسی شد.");
-    
-    const scanRes = scanDirectoryRecursivelyForPhotos(drivePath);
-    newIndexed = scanRes.indexedCount;
-    totalFound = scanRes.totalPhotos;
-
-    if (newIndexed > 0) {
-      saveDb();
-      dbData.telemetry.lastPhotoReceivedTime = new Date().toISOString();
-      logs.push(`تعداد ${newIndexed} شات جدید به صندوق ورودی اضافه شد.`);
-      broadcastEventToClients({
-        type: "NEW_PHOTOS",
-        count: newIndexed,
-        photos: scanRes.newlyAdded,
-      });
-    } else {
-      logs.push(`تمام عکس‌های موجود در این پوشه (${totalFound} عکس) قبلاً ایندکس شده‌اند.`);
-    }
+    logs.push("دسترسی خواندن/نوشتن هارد تایید گردید.");
   } catch (err: any) {
     logs.push(`⚠️ هشدار دسترسی به هارد: ${err.message}`);
     logSystemEvent("WARN", "HDD Scanner", `دسترسی به مسیر هارد با خطا مواجه شد: ${err.message}`);
   }
 
-  const spaceStats = getStorageSpaceStats(drivePath);
-
   const result: DriveScanResult = {
     isSuccess: true,
     scannedAt: new Date().toLocaleTimeString("fa-IR"),
     drivePath,
-    totalPhotosFound: dbData.photos.length,
+    totalPhotosFound: totalFound,
     newPhotosIndexed: newIndexed,
-    freeSpaceGb: spaceStats.freeGb,
-    logs,
+    freeSpaceGb: 0,
+    logs
   };
 
   return result;
@@ -553,80 +407,10 @@ function scanHardDriveForPhotos(targetPath?: string): DriveScanResult {
 
 async function startServer() {
   const app = express();
-  // Support custom PORT (e.g. 8081 for PM2/production) with fallback to 8081 in production and 3000 in dev
-  const PORT = process.env.PORT
-    ? parseInt(process.env.PORT, 10)
-    : (process.env.NODE_ENV === "production" ? 8081 : 3000);
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-
-  // --- RAW IMAGE STREAMING API (SERVES REAL HDD FILES & CAMERA PICTURES) ---
-  app.get(["/api/fs/raw", "/api/photos/image"], (req, res) => {
-    const rawPath = (req.query.path || req.query.file || "") as string;
-    if (!rawPath) {
-      return res.status(400).send("مسیر فایل مشخص نشده است.");
-    }
-
-    try {
-      const decodedPath = decodeURIComponent(rawPath);
-      const resolvedPath = path.resolve(decodedPath);
-
-      if (fs.existsSync(resolvedPath)) {
-        const stat = fs.statSync(resolvedPath);
-        if (stat.isFile() && stat.size > 0) {
-          const ext = path.extname(resolvedPath).toLowerCase();
-          let mimeType = "image/jpeg";
-          if (ext === ".png") mimeType = "image/png";
-          else if (ext === ".webp") mimeType = "image/webp";
-          else if (ext === ".gif") mimeType = "image/gif";
-          else if (ext === ".bmp") mimeType = "image/bmp";
-          else if (ext === ".svg") mimeType = "image/svg+xml";
-
-          res.setHeader("Content-Type", mimeType);
-          res.setHeader("Content-Length", stat.size);
-          res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
-          res.setHeader("Accept-Ranges", "bytes");
-
-          const stream = fs.createReadStream(resolvedPath);
-          return stream.pipe(res);
-        }
-      }
-    } catch (e) {
-      console.warn("Raw image serve error:", rawPath, e);
-    }
-
-    // High quality medical SVG placeholder when local file is missing or still synchronizing
-    const fileName = path.basename(rawPath) || "MEDICAL_PHOTO.JPG";
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-      <defs>
-        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#0f172a" />
-          <stop offset="100%" stop-color="#1e293b" />
-        </linearGradient>
-        <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#10b981" />
-          <stop offset="100%" stop-color="#06b6d4" />
-        </linearGradient>
-      </defs>
-      <rect width="800" height="600" fill="url(#bg)" />
-      <g stroke="#334155" stroke-width="0.5" opacity="0.3">
-        <path d="M0,100 H800 M0,200 H800 M0,300 H800 M0,400 H800 M0,500 H800" />
-        <path d="M100,0 V600 M200,0 V600 M300,0 V600 M400,0 V600 M500,0 V600 M600,0 V600 M700,0 V600" />
-      </g>
-      <rect x="20" y="20" width="760" height="560" rx="16" fill="none" stroke="url(#accent)" stroke-width="2" opacity="0.6" />
-      <circle cx="400" cy="240" r="48" fill="#1e293b" stroke="#10b981" stroke-width="3" />
-      <circle cx="400" cy="240" r="28" fill="#0f172a" stroke="#38bdf8" stroke-width="2" />
-      <circle cx="410" cy="230" r="6" fill="#38bdf8" opacity="0.8" />
-      <text x="400" y="340" text-anchor="middle" font-family="sans-serif, system-ui" font-size="22" font-weight="bold" fill="#f8fafc">${fileName}</text>
-      <text x="400" y="375" text-anchor="middle" font-family="sans-serif, system-ui" font-size="14" fill="#10b981">شات پزشکی رزبری‌پای • هارد اکسترنال</text>
-      <text x="400" y="410" text-anchor="middle" font-family="sans-serif, system-ui" font-size="12" fill="#64748b">فرمت: JPG 24MP • آماده مشاهده و الصاق به پرونده</text>
-    </svg>`;
-
-    res.setHeader("Content-Type", "image/svg+xml");
-    res.setHeader("Cache-Control", "public, max-age=300");
-    return res.send(svg);
-  });
 
   // --- LIVE LOG SSE STREAM API ---
   app.get("/api/logs/stream", (req, res) => {
@@ -840,32 +624,7 @@ async function startServer() {
       `مسیر فعال ذخیره‌سازی تغییر یافت: "${selectedPath}"`
     );
 
-    // Immediately scan this selected folder so new photos appear in Inbox!
-    const scanResult = scanHardDriveForPhotos(selectedPath);
-
-    res.json({ success: true, storagePath: selectedPath, scanResult });
-  });
-
-  // Import all photos of a specific folder into Inbox
-  app.post("/api/fs/import-folder-to-inbox", (req, res) => {
-    const targetFolder = req.body?.folderPath || dbData.driveConfig.activeStoragePath || DEFAULT_STORAGE_DIR;
-    const scanRes = scanDirectoryRecursivelyForPhotos(targetFolder);
-    if (scanRes.indexedCount > 0) {
-      saveDb();
-      dbData.telemetry.lastPhotoReceivedTime = new Date().toISOString();
-      broadcastEventToClients({
-        type: "NEW_PHOTOS",
-        count: scanRes.indexedCount,
-        photos: scanRes.newlyAdded,
-      });
-    }
-    res.json({
-      success: true,
-      folder: targetFolder,
-      newIndexed: scanRes.indexedCount,
-      totalFound: scanRes.totalPhotos,
-      photos: scanRes.newlyAdded,
-    });
+    res.json({ success: true, storagePath: selectedPath });
   });
 
   // Delete File / Directory
@@ -1227,34 +986,6 @@ async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
-
-  // Initial scan of active storage directory on boot
-  try {
-    const initScan = scanHardDriveForPhotos();
-    console.log(`[HDD Auto-Scanner] Initial scan indexed ${initScan.newPhotosIndexed} new photos. Total photos: ${initScan.totalPhotosFound}`);
-  } catch (err) {
-    console.warn("[HDD Auto-Scanner] Initial scan warning:", err);
-  }
-
-  // Background auto-detection interval: checks every 3 seconds for new photos from SD Card, Camera, or HDD
-  setInterval(() => {
-    try {
-      const activePath = dbData.driveConfig.activeStoragePath || DEFAULT_STORAGE_DIR;
-      if (fs.existsSync(activePath)) {
-        const scanRes = scanDirectoryRecursivelyForPhotos(activePath, 6);
-        if (scanRes.indexedCount > 0) {
-          saveDb();
-          dbData.telemetry.lastPhotoReceivedTime = new Date().toISOString();
-          console.log(`[HDD Auto-Scanner] Discovered ${scanRes.indexedCount} new photo(s) in "${activePath}". Added to Inbox.`);
-          broadcastEventToClients({
-            type: "NEW_PHOTOS",
-            count: scanRes.indexedCount,
-            photos: scanRes.newlyAdded,
-          });
-        }
-      }
-    } catch (e) {}
-  }, 3000);
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Medical Storage & Live Log Server running on port ${PORT}`);
