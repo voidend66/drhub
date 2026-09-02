@@ -553,7 +553,10 @@ function scanHardDriveForPhotos(targetPath?: string): DriveScanResult {
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  // Support custom PORT (e.g. 8081 for PM2/production) with fallback to 8081 in production and 3000 in dev
+  const PORT = process.env.PORT
+    ? parseInt(process.env.PORT, 10)
+    : (process.env.NODE_ENV === "production" ? 8081 : 3000);
 
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));

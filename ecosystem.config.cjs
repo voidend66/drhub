@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "sdrssrv",
+      name: "drshahi",
       script: "dist/server.cjs",
       instances: 1,
       autorestart: true,
@@ -9,7 +9,7 @@ module.exports = {
       max_memory_restart: "1G",
       env: {
         NODE_ENV: "production",
-        PORT: 3000
+        PORT: 8081
       }
     }
   ]
