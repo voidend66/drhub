@@ -380,8 +380,9 @@ async function startServer() {
   // --- LIVE LOG SSE STREAM API ---
   app.get("/api/logs/stream", (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
 
     // Send existing logs first
@@ -445,7 +446,7 @@ async function startServer() {
   });
 
   // Trigger Immediate HDD Scan
-  app.post("/api/drive/rescan", (req, res) => {
+  app.post(["/api/drive/rescan", "/api/storage/rescan"], (req, res) => {
     const scanResult = scanHardDriveForPhotos();
     logSystemEvent(
       "SUCCESS",
@@ -453,6 +454,21 @@ async function startServer() {
       `اسکن دایرکتوری انجام شد. تعداد عکس‌های موجود: ${scanResult.totalPhotosFound}`
     );
     res.json(scanResult);
+  });
+
+  // Fix Permissions Endpoint for storage folder
+  app.post("/api/fs/fix-permissions", (req, res) => {
+    const targetDir = req.body?.path || dbData.driveConfig.activeStoragePath || DEFAULT_STORAGE_DIR;
+    try {
+      if (fs.existsSync(targetDir)) {
+        try {
+          execSync(`chmod -R 775 "${targetDir}"`);
+        } catch (e) {}
+      }
+      res.json({ success: true, message: "مجوزهای دسترسی بازنشانی شدند.", path: targetDir });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // --- FILE MANAGER & DIRECTORY EXPLORER APIS ---
@@ -766,6 +782,14 @@ async function startServer() {
     };
     saveDb();
     res.json({ success: true, message: "پایگاه داده پاکسازی گردید." });
+  });
+
+  // Strict JSON 404 Handler for all API routes (prevents SPA index.html rewrite)
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({
+      error: "مسیر API مورد نظر یافت نشد.",
+      path: req.originalUrl
+    });
   });
 
   // --- VITE MIDDLEWARE ---
