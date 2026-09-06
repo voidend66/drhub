@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import DatabaseConstructor, { Database as SqliteDatabase } from "better-sqlite3";
-import { Patient, MedicalPhoto, StoragePartitionInfo } from "./src/types";
+import { DatabaseSync } from "node:sqlite";
+import { Patient, MedicalPhoto } from "./src/types";
 
 export interface SqliteStatus {
   enabled: boolean;
@@ -20,12 +20,105 @@ export interface SqliteStatus {
   lastUpdated: string;
 }
 
+export interface ISqliteStatement {
+  all(...params: any[]): any[];
+  get(...params: any[]): any;
+  run(params?: any): { changes?: number | bigint; lastInsertRowid?: number | bigint };
+}
+
+export interface ISqliteDb {
+  exec(sql: string): void;
+  prepare(sql: string): ISqliteStatement;
+  pragma(sql: string): void;
+  transaction<T>(fn: (...args: any[]) => T): (...args: any[]) => T;
+  close(): void;
+}
+
+function normalizeNamedParams(params: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = { ...params };
+  for (const [k, v] of Object.entries(params)) {
+    if (!k.startsWith("@") && !k.startsWith(":") && !k.startsWith("$")) {
+      result["@" + k] = v;
+      result[":" + k] = v;
+      result["$" + k] = v;
+    }
+  }
+  return result;
+}
+
+class SqliteDatabaseAdapter implements ISqliteDb {
+  private db: DatabaseSync;
+
+  constructor(filePath: string) {
+    this.db = new DatabaseSync(filePath);
+  }
+
+  exec(sql: string): void {
+    this.db.exec(sql);
+  }
+
+  pragma(command: string): void {
+    try {
+      this.db.exec(`PRAGMA ${command};`);
+    } catch (e: any) {
+      console.warn(`[SQLite Pragma] PRAGMA ${command} notice:`, e?.message);
+    }
+  }
+
+  prepare(sql: string): ISqliteStatement {
+    const stmt = this.db.prepare(sql);
+    return {
+      all: (...params: any[]) => {
+        if (params.length === 1 && typeof params[0] === "object" && params[0] !== null && !Array.isArray(params[0])) {
+          return stmt.all(normalizeNamedParams(params[0])) as any[];
+        }
+        return stmt.all(...params) as any[];
+      },
+      get: (...params: any[]) => {
+        if (params.length === 1 && typeof params[0] === "object" && params[0] !== null && !Array.isArray(params[0])) {
+          return stmt.get(normalizeNamedParams(params[0])) as any;
+        }
+        return stmt.get(...params) as any;
+      },
+      run: (params?: any) => {
+        if (params && typeof params === "object" && !Array.isArray(params)) {
+          return stmt.run(normalizeNamedParams(params));
+        }
+        if (params !== undefined) {
+          return stmt.run(params);
+        }
+        return stmt.run();
+      }
+    };
+  }
+
+  transaction<T>(fn: (...args: any[]) => T): (...args: any[]) => T {
+    return (...args: any[]) => {
+      this.db.exec("BEGIN");
+      try {
+        const result = fn(...args);
+        this.db.exec("COMMIT");
+        return result;
+      } catch (err) {
+        this.db.exec("ROLLBACK");
+        throw err;
+      }
+    };
+  }
+
+  close(): void {
+    try {
+      this.db.close();
+    } catch {}
+  }
+}
+
 // Default requested path: /media/mahdi/mm/doctor
 const DEFAULT_SQLITE_DIR = "/media/mahdi/mm/doctor";
 const DEFAULT_SQLITE_FILE = "patients.db";
 const FALLBACK_SQLITE_DIR = path.join(process.cwd(), "medical_storage", "doctor");
 
-let activeDbInstance: SqliteDatabase | null = null;
+let activeDbInstance: ISqliteDb | null = null;
 let currentConfiguredPath = process.env.SQLITE_DB_PATH || path.join(DEFAULT_SQLITE_DIR, DEFAULT_SQLITE_FILE);
 let currentActualPath = currentConfiguredPath;
 let isCurrentFallback = false;
@@ -42,7 +135,7 @@ function formatBytes(bytes: number): string {
 /**
  * Initialize SQLite tables for patients, photos, and settings
  */
-function initSchema(db: SqliteDatabase) {
+function initSchema(db: ISqliteDb) {
   // Optimize sqlite pragmas for reliable embedded writes on Raspberry Pi
   db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
@@ -118,15 +211,15 @@ export function initSqliteDatabase(requestedPath?: string): { success: boolean; 
     if (!fs.existsSync(targetDir)) {
       fs.mkdirSync(targetDir, { recursive: true });
     }
-    const db = new DatabaseConstructor(targetPath);
+    const db = new SqliteDatabaseAdapter(targetPath);
     initSchema(db);
     activeDbInstance = db;
     currentActualPath = targetPath;
     isCurrentFallback = false;
     return { success: true, path: targetPath, isFallback: false };
   } catch (err: any) {
-    lastStatusError = err.message;
-    console.warn(`[SQLite Notice] Could not open SQLite at "${targetPath}": ${err.message}. Attempting safe fallback directory...`);
+    lastStatusError = err?.message || String(err);
+    console.warn(`[SQLite Notice] Could not open SQLite at "${targetPath}": ${lastStatusError}. Attempting safe fallback directory...`);
   }
 
   // Attempt 2: Fallback to local storage (e.g. ./medical_storage/doctor/patients.db)
@@ -135,7 +228,7 @@ export function initSqliteDatabase(requestedPath?: string): { success: boolean; 
       fs.mkdirSync(FALLBACK_SQLITE_DIR, { recursive: true });
     }
     const fallbackPath = path.join(FALLBACK_SQLITE_DIR, DEFAULT_SQLITE_FILE);
-    const db = new DatabaseConstructor(fallbackPath);
+    const db = new SqliteDatabaseAdapter(fallbackPath);
     initSchema(db);
     activeDbInstance = db;
     currentActualPath = fallbackPath;
@@ -148,15 +241,15 @@ export function initSqliteDatabase(requestedPath?: string): { success: boolean; 
     };
   } catch (fallbackErr: any) {
     console.error("[SQLite Error] Critical failure opening SQLite fallback:", fallbackErr);
-    lastStatusError = fallbackErr.message;
-    return { success: false, path: targetPath, isFallback: false, error: fallbackErr.message };
+    lastStatusError = fallbackErr?.message || String(fallbackErr);
+    return { success: false, path: targetPath, isFallback: false, error: lastStatusError };
   }
 }
 
 /**
  * Get active SQLite connection, self-healing if needed.
  */
-export function getDb(): SqliteDatabase {
+export function getDb(): ISqliteDb {
   if (!activeDbInstance) {
     initSqliteDatabase(currentConfiguredPath);
   }
@@ -198,8 +291,8 @@ export function getSqliteStatus(): SqliteStatus {
 
   try {
     const db = getDb();
-    const pCountRow = db.prepare("SELECT COUNT(*) as count FROM patients").get() as { count: number };
-    const phCountRow = db.prepare("SELECT COUNT(*) as count FROM photos").get() as { count: number };
+    const pCountRow = db.prepare("SELECT COUNT(*) as count FROM patients").get() as { count?: number };
+    const phCountRow = db.prepare("SELECT COUNT(*) as count FROM photos").get() as { count?: number };
     patientsCount = pCountRow?.count || 0;
     photosCount = phCountRow?.count || 0;
     isConnected = true;
@@ -471,8 +564,8 @@ export function clearAllPhotosFromSqlite(): boolean {
 export function seedInitialDataIfEmpty(initialPatients: Patient[], initialPhotos: MedicalPhoto[]) {
   try {
     const db = getDb();
-    const countRow = db.prepare("SELECT COUNT(*) as count FROM patients").get() as { count: number };
-    if (countRow && countRow.count === 0 && initialPatients.length > 0) {
+    const countRow = db.prepare("SELECT COUNT(*) as count FROM patients").get() as { count?: number };
+    if (countRow && (countRow.count === 0 || countRow.count === undefined) && initialPatients.length > 0) {
       console.log(`[SQLite Seed] Populating initial ${initialPatients.length} patients and ${initialPhotos.length} photos into SQLite...`);
       const insertManyPatients = db.transaction((patients: Patient[]) => {
         for (const p of patients) {
